@@ -1,6 +1,7 @@
 from modules import (
     conectar_google_sheets,
     salvar_aba,
+    adicionar_linha_aba,
     DataLoader,
     FluxoCaixaProcessor,
     PatrimonioCalculator
@@ -46,8 +47,12 @@ def main():
         print("  ✓ FluxoCaixaCompleto salvo")
 
     if not patrimonio['btc'].empty:
-        salvar_aba(spreadsheet, "InvestimentoBTC", patrimonio['btc'])
-        print("  ✓ InvestimentoBTC salvo")
+        salvar_aba(spreadsheet, "InvestimentoBTC_Historico", patrimonio['btc'])
+        print("  ✓ InvestimentoBTC_Historico salvo")
+
+    if not patrimonio['btc_snapshot'].empty:
+        adicionar_linha_aba(spreadsheet, "InvestimentoBTC", patrimonio['btc_snapshot'])
+        print("  ✓ Nova linha adicionada em InvestimentoBTC")
 
     if not patrimonio['porquinho'].empty:
         salvar_aba(spreadsheet, "InvestimentoPorquinho", patrimonio['porquinho'])

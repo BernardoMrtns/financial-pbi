@@ -3,7 +3,7 @@ Módulo para carregamento e normalização de dados das abas
 """
 import pandas as pd
 from modules.google_sheets import carregar_aba
-from modules.utils import converter_data_flexivel
+from modules.utils import converter_data_flexivel, converter_numero_flexivel
 from config import SCHEMA_ABAS
 
 
@@ -35,10 +35,10 @@ class DataLoader:
         df_receitas = carregar_aba(self.spreadsheet, "Receitas", SCHEMA_ABAS["Receitas"])
         df_inv = carregar_aba(self.spreadsheet, "Investimentos", SCHEMA_ABAS["Investimentos"])
 
-        # Normalização geral
-        tabelas = [df_compras, df_pix, df_assin, df_debito, df_receitas, df_inv]
+        # Normalização geral - processa todas as tabelas exceto Investimentos
+        tabelas = [df_compras, df_pix, df_assin, df_debito, df_receitas]
         for df in tabelas:
-            # Aplica a conversão flexível corrigida
+            # Aplica a conversão flexível corrigida (sem hora)
             if "Data" in df.columns:
                 df["Data"] = converter_data_flexivel(df["Data"])
             if "Inicio" in df.columns:
@@ -48,9 +48,15 @@ class DataLoader:
 
             # Tratamento de valores numéricos
             if "ValorTotal" in df.columns:
-                df["ValorTotal"] = pd.to_numeric(df["ValorTotal"], errors="coerce").fillna(0.0)
+                df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
             if "Valor" in df.columns:
-                df["Valor"] = pd.to_numeric(df["Valor"], errors="coerce").fillna(0.0)
+                df["Valor"] = converter_numero_flexivel(df["Valor"])
+        
+        # Para Investimentos, preserva hora na coluna Data para precisão em BTC
+        if "Data" in df_inv.columns:
+            df_inv["Data"] = converter_data_flexivel(df_inv["Data"], preservar_hora=True)
+        if "Valor" in df_inv.columns:
+            df_inv["Valor"] = converter_numero_flexivel(df_inv["Valor"])
 
         return {
             'mapa_pagamentos': mapa_pagamentos,

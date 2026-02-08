@@ -1,7 +1,7 @@
 """
 Módulo de finanças pessoais
 """
-from .google_sheets import conectar_google_sheets, carregar_aba, salvar_aba
+from .google_sheets import conectar_google_sheets, carregar_aba, salvar_aba, adicionar_linha_aba
 from .data_loader import DataLoader
 from .data_processor import FluxoCaixaProcessor
 from .patrimonio import PatrimonioCalculator
