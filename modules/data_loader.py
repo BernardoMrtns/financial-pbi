@@ -52,7 +52,7 @@ class DataLoader:
             if "Valor" in df.columns:
                 df["Valor"] = converter_numero_flexivel(df["Valor"])
         
-        # Para Investimentos, preserva hora na coluna Data para precisão em BTC
+        # Para Investimentos, preserva hora na coluna Data para precisão em cripto
         if "Data" in df_inv.columns:
             df_inv["Data"] = converter_data_flexivel(df_inv["Data"], preservar_hora=True)
         if "Valor" in df_inv.columns:

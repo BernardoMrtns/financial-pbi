@@ -44,7 +44,7 @@ def carregar_aba(spreadsheet, nome_aba, colunas_esperadas):
 def salvar_aba(spreadsheet, nome_aba, df):
     """
     Salva um DataFrame em uma aba do Google Sheets
-    Para InvestimentoBTC, preserva Date/Time completo para maior precisão
+    Para abas de snapshot de cripto, preserva Date/Time completo para maior precisão
     """
     try:
         worksheet = spreadsheet.worksheet(nome_aba)
@@ -56,8 +56,8 @@ def salvar_aba(spreadsheet, nome_aba, df):
     # Converte datas para string
     for col in df_copy.columns:
         if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
-            # Para InvestimentoBTC, usa formato com data e hora completa
-            if nome_aba == "InvestimentoBTC":
+            # Para snapshots de cripto, usa formato com data e hora completa
+            if nome_aba in {"InvestimentoBTC", "InvestimentoCripto"}:
                 df_copy[col] = df_copy[col].dt.strftime('%d/%m/%Y %H:%M:%S')
             else:
                 # Outras abas usam apenas data

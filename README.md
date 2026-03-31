@@ -68,7 +68,8 @@ Classe `FluxoCaixaProcessor`: Processa movimentações:
 ### modules/patrimonio.py
 Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
 - Porquinho (corrigido por CDI)
-- Bitcoin (com cotação histórica)
+- Bitcoin (com lógica exclusiva)
+- Criptomoedas genéricas por ticker (ex.: SOL, XRP, ETH)
 
 ## Abas do Google Sheets
 
@@ -84,4 +85,7 @@ Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
 **Saída:**
 - FluxoCaixaCompleto
 - InvestimentoBTC
+- InvestimentoBTC_Historico
+- InvestimentoCripto
+- InvestimentoCripto_Historico
 - InvestimentoPorquinho
