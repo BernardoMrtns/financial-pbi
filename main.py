@@ -62,9 +62,9 @@ def main():
         adicionar_linha_aba(spreadsheet, "InvestimentoCripto", patrimonio['cripto_snapshot'])
         print("  ✓ Nova linha adicionada em InvestimentoCripto")
 
-    if not patrimonio['porquinho'].empty:
-        salvar_aba(spreadsheet, "InvestimentoPorquinho", patrimonio['porquinho'])
-        print("  ✓ InvestimentoPorquinho salvo")
+    if not patrimonio['cdi'].empty:
+        salvar_aba(spreadsheet, "InvestimentoCDI", patrimonio['cdi'])
+        print("  ✓ InvestimentoCDI salvo")
 
     print("\n" + "=" * 70)
     print("✅ PROCESSAMENTO CONCLUÍDO COM SUCESSO!")

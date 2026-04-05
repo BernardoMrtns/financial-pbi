@@ -107,7 +107,7 @@ def calcular_mes_competencia(data_compra):
         return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()
 
 
-def get_cdi_historico(data_inicio):
+def obter_cdi_historico(data_inicio):
     """
     Busca histórico de CDI na API do Banco Central
     """

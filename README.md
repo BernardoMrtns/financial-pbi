@@ -52,7 +52,7 @@ Configurações centralizadas do sistema (credenciais, IDs, schemas).
 ### modules/utils.py
 - `converter_data_flexivel()`: Converte datas em múltiplos formatos
 - `calcular_mes_competencia()`: Calcula mês de competência do cartão
-- `get_cdi_historico()`: Busca histórico de CDI
+- `obter_cdi_historico()`: Busca histórico de CDI
 
 ### modules/data_loader.py
 Classe `DataLoader`: Carrega e normaliza todas as abas do Google Sheets.
@@ -67,7 +67,7 @@ Classe `FluxoCaixaProcessor`: Processa movimentações:
 
 ### modules/patrimonio.py
 Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
-- Porquinho (corrigido por CDI)
+- CDI (corrigido diariamente)
 - Bitcoin (com lógica exclusiva)
 - Criptomoedas genéricas por ticker (ex.: SOL, XRP, ETH)
 
@@ -88,4 +88,4 @@ Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
 - InvestimentoBTC_Historico
 - InvestimentoCripto
 - InvestimentoCripto_Historico
-- InvestimentoPorquinho
+- InvestimentoCDI

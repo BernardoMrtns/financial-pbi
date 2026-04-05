@@ -1,10 +1,10 @@
 """
-Módulo para cálculo de patrimônio (Porquinho CDI e Bitcoin)
+Módulo para cálculo de patrimônio (CDI e Bitcoin)
 """
 import pandas as pd
 import requests
 import datetime
-from modules.utils import get_cdi_historico, converter_numero_flexivel
+from modules.utils import obter_cdi_historico, converter_numero_flexivel
 
 
 class PatrimonioCalculator:
@@ -23,7 +23,7 @@ class PatrimonioCalculator:
         """
         print("🪙  Processando Patrimônio (CDI e Cripto)...")
 
-        df_porquinho = pd.DataFrame()
+        df_cdi = pd.DataFrame()
         df_btc = pd.DataFrame()
         df_btc_snapshot = pd.DataFrame()
         df_cripto = pd.DataFrame()
@@ -58,7 +58,7 @@ class PatrimonioCalculator:
                 self.df_inv["ValorLiquido"] = self.df_inv["Valor"] * self.df_inv["Sinal"]
                 self.df_inv["QtdLiquida"] = self.df_inv["QuantidadeCripto"] * self.df_inv["Sinal"]
 
-                df_porquinho = self._calcular_porquinho_cdi()
+                df_cdi = self._calcular_cdi()
                 df_btc = self._calcular_bitcoin()
                 df_btc_snapshot = self._calcular_bitcoin_snapshot()
                 df_cripto = self._calcular_criptos_historico()
@@ -68,43 +68,53 @@ class PatrimonioCalculator:
             print(f"⚠️ Erro ao processar investimentos: {e}")
 
         return {
-            'porquinho': df_porquinho,
+            'cdi': df_cdi,
             'btc': df_btc,
             'btc_snapshot': df_btc_snapshot,
             'cripto': df_cripto,
             'cripto_snapshot': df_cripto_snapshot
         }
 
-    def _calcular_porquinho_cdi(self):
+    def _calcular_cdi(self):
         """
-        Calcula evolução do Porquinho com correção CDI
+        Calcula evolução do CDI com correção diária
         """
-        df_pig = self.df_inv[self.df_inv["Tipo"] == "PORQUINHO"].copy()
+        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
+        df_movimentos_cdi = self.df_inv[tipo_normalizado.eq("CDI")].copy()
 
-        if df_pig.empty:
+        if df_movimentos_cdi.empty:
             return pd.DataFrame()
 
-        data_min = df_pig["Data"].min()
+        # O patrimônio em CDI é diário: normaliza timestamps para evitar perder
+        # aportes/resgates com hora diferente de 00:00:00 no merge da série.
+        df_movimentos_cdi["DataDia"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce").dt.normalize()
+        df_movimentos_cdi = df_movimentos_cdi[df_movimentos_cdi["DataDia"].notna()].copy()
+
+        if df_movimentos_cdi.empty:
+            return pd.DataFrame()
+
+        data_min = df_movimentos_cdi["DataDia"].min()
         datas_full = pd.date_range(start=data_min, end=self.hoje, freq='D')
-        df_cdi = get_cdi_historico(data_min)
+        df_historico_cdi = obter_cdi_historico(data_min)
 
-        df_final_pig = pd.DataFrame(index=datas_full)
-        df_final_pig.index.name = "Data"
-        df_final_pig = df_final_pig.reset_index()
+        df_final_cdi = pd.DataFrame(index=datas_full)
+        df_final_cdi.index.name = "Data"
+        df_final_cdi = df_final_cdi.reset_index()
 
-        fluxo_diario = df_pig.groupby("Data")["ValorLiquido"].sum().reset_index()
-        df_final_pig = df_final_pig.merge(fluxo_diario, on="Data", how="left").fillna(0)
-        df_final_pig = df_final_pig.merge(df_cdi, on="Data", how="left")
-        df_final_pig["FatorDiario"] = df_final_pig["FatorDiario"].fillna(1.0)
+        fluxo_diario = df_movimentos_cdi.groupby("DataDia")["ValorLiquido"].sum().reset_index()
+        fluxo_diario = fluxo_diario.rename(columns={"DataDia": "Data"})
+        df_final_cdi = df_final_cdi.merge(fluxo_diario, on="Data", how="left").fillna(0)
+        df_final_cdi = df_final_cdi.merge(df_historico_cdi, on="Data", how="left")
+        df_final_cdi["FatorDiario"] = df_final_cdi["FatorDiario"].fillna(1.0)
 
         saldo_atual = 0
         saldos = []
-        for _, row in df_final_pig.iterrows():
+        for _, row in df_final_cdi.iterrows():
             saldo_atual = (saldo_atual * row["FatorDiario"]) + row["ValorLiquido"]
             saldos.append(saldo_atual)
 
-        df_final_pig["ValorPorquinho"] = saldos
-        return df_final_pig[["Data", "ValorPorquinho"]]
+        df_final_cdi["ValorCDI"] = saldos
+        return df_final_cdi[["Data", "ValorCDI"]]
 
     def _resolver_ativo_cripto(self, ticker):
         """
@@ -259,8 +269,9 @@ class PatrimonioCalculator:
         """
         Calcula evolução histórica de criptomoedas (exceto BTC, que segue em fluxo dedicado).
         """
+        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
         df_cripto = self.df_inv[
-            (~self.df_inv["Tipo"].isin(["PORQUINHO", "BTC"])) & (self.df_inv["Tipo"] != "")
+            (~tipo_normalizado.isin(["BTC", "CDI"])) & (tipo_normalizado != "")
         ].copy()
 
         if df_cripto.empty:
@@ -292,8 +303,9 @@ class PatrimonioCalculator:
         """
         Calcula snapshot atual para todas as criptomoedas (exceto BTC).
         """
+        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
         df_cripto = self.df_inv[
-            (~self.df_inv["Tipo"].isin(["PORQUINHO", "BTC"])) & (self.df_inv["Tipo"] != "")
+            (~tipo_normalizado.isin(["BTC", "CDI"])) & (tipo_normalizado != "")
         ].copy()
 
         if df_cripto.empty:
