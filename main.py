@@ -47,24 +47,16 @@ def main():
         print("  ✓ FluxoCaixaCompleto salvo")
 
     if not patrimonio['btc'].empty:
-        salvar_aba(spreadsheet, "InvestimentoBTC_Historico", patrimonio['btc'])
-        print("  ✓ InvestimentoBTC_Historico salvo")
-
-    if not patrimonio['btc_snapshot'].empty:
-        adicionar_linha_aba(spreadsheet, "InvestimentoBTC", patrimonio['btc_snapshot'])
+        adicionar_linha_aba(spreadsheet, "InvestimentoBTC", patrimonio['btc'])
         print("  ✓ Nova linha adicionada em InvestimentoBTC")
-
-    if not patrimonio['cripto'].empty:
-        salvar_aba(spreadsheet, "InvestimentoCripto_Historico", patrimonio['cripto'])
-        print("  ✓ InvestimentoCripto_Historico salvo")
-
-    if not patrimonio['cripto_snapshot'].empty:
-        adicionar_linha_aba(spreadsheet, "InvestimentoCripto", patrimonio['cripto_snapshot'])
-        print("  ✓ Nova linha adicionada em InvestimentoCripto")
 
     if not patrimonio['cdi'].empty:
         salvar_aba(spreadsheet, "InvestimentoCDI", patrimonio['cdi'])
         print("  ✓ InvestimentoCDI salvo")
+
+    if not patrimonio['cripto'].empty:
+        adicionar_linha_aba(spreadsheet, "InvestimentoCripto", patrimonio['cripto'])
+        print("  ✓ Nova linha adicionada em InvestimentoCripto")
 
     print("\n" + "=" * 70)
     print("✅ PROCESSAMENTO CONCLUÍDO COM SUCESSO!")

@@ -85,7 +85,5 @@ Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
 **Saída:**
 - FluxoCaixaCompleto
 - InvestimentoBTC
-- InvestimentoBTC_Historico
 - InvestimentoCripto
-- InvestimentoCripto_Historico
 - InvestimentoCDI

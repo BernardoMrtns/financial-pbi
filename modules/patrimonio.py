@@ -25,9 +25,7 @@ class PatrimonioCalculator:
 
         df_cdi = pd.DataFrame()
         df_btc = pd.DataFrame()
-        df_btc_snapshot = pd.DataFrame()
         df_cripto = pd.DataFrame()
-        df_cripto_snapshot = pd.DataFrame()
 
         try:
             if not self.df_inv.empty:
@@ -59,10 +57,8 @@ class PatrimonioCalculator:
                 self.df_inv["QtdLiquida"] = self.df_inv["QuantidadeCripto"] * self.df_inv["Sinal"]
 
                 df_cdi = self._calcular_cdi()
-                df_btc = self._calcular_bitcoin()
-                df_btc_snapshot = self._calcular_bitcoin_snapshot()
-                df_cripto = self._calcular_criptos_historico()
-                df_cripto_snapshot = self._calcular_criptos_snapshot()
+                df_btc = self._calcular_bitcoin_snapshot()
+                df_cripto = self._calcular_criptos_snapshot()
 
         except Exception as e:
             print(f"⚠️ Erro ao processar investimentos: {e}")
@@ -70,9 +66,7 @@ class PatrimonioCalculator:
         return {
             'cdi': df_cdi,
             'btc': df_btc,
-            'btc_snapshot': df_btc_snapshot,
-            'cripto': df_cripto,
-            'cripto_snapshot': df_cripto_snapshot
+            'cripto': df_cripto
         }
 
     def _calcular_cdi(self):
@@ -157,23 +151,6 @@ class PatrimonioCalculator:
             self._cache_ativos_cripto[ticker] = None
             return None
 
-    def _buscar_precos_historicos(self, coin_id, ts_start, ts_end):
-        """
-        Busca série histórica de preços para um ativo cripto.
-        """
-        url = (
-            f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart/range"
-            f"?vs_currency=brl&from={ts_start}&to={ts_end}"
-        )
-        r = requests.get(url, timeout=15).json()
-        prices = r.get("prices", [])
-        if not prices:
-            return pd.DataFrame()
-
-        df_precos = pd.DataFrame(prices, columns=["Timestamp", "PrecoCripto"])
-        df_precos["DataHora"] = pd.to_datetime(df_precos["Timestamp"], unit="ms")
-        return df_precos[["DataHora", "PrecoCripto"]]
-
     def _buscar_precos_atuais(self, coin_ids):
         """
         Busca preços atuais em lote para múltiplos ativos.
@@ -192,54 +169,6 @@ class PatrimonioCalculator:
         except Exception as e:
             print(f"⚠️ Erro ao buscar preços atuais de cripto: {e}")
             return {}
-
-    def _calcular_historico_ativo_cripto(self, df_ativo, coin_id, ticker, nome_ativo):
-        """
-        Calcula histórico consolidado de um ativo cripto.
-        """
-        if df_ativo.empty:
-            return pd.DataFrame()
-
-        df_ativo = df_ativo[df_ativo["Data"].notna()].copy()
-        if df_ativo.empty:
-            return pd.DataFrame()
-
-        ts_start = int(df_ativo["Data"].min().timestamp())
-        ts_end = int(datetime.datetime.now().timestamp())
-        df_precos = self._buscar_precos_historicos(coin_id, ts_start, ts_end)
-
-        if df_precos.empty:
-            print(f"⚠️ API Coingecko não retornou dados para {ticker}")
-            return pd.DataFrame()
-
-        resultado = []
-        for _, row in df_ativo.iterrows():
-            data_transacao = row["Data"]
-            df_precos_temp = df_precos.copy()
-            df_precos_temp["diff"] = (df_precos_temp["DataHora"] - data_transacao).abs()
-
-            if df_precos_temp["diff"].empty:
-                continue
-
-            idx_mais_proximo = df_precos_temp["diff"].idxmin()
-            preco_ativo = df_precos_temp.loc[idx_mais_proximo, "PrecoCripto"]
-
-            resultado.append({
-                "DataHora": data_transacao,
-                "Ticker": ticker,
-                "Ativo": nome_ativo,
-                "QtdLiquida": row["QtdLiquida"],
-                "PrecoCripto": preco_ativo
-            })
-
-        if not resultado:
-            return pd.DataFrame()
-
-        df_final = pd.DataFrame(resultado).sort_values("DataHora")
-        df_final["SaldoCripto"] = df_final["QtdLiquida"].cumsum()
-        df_final["ValorReais"] = df_final["SaldoCripto"] * df_final["PrecoCripto"]
-
-        return df_final[["DataHora", "Ticker", "Ativo", "SaldoCripto", "PrecoCripto", "ValorReais"]]
 
     def _calcular_snapshot_ativo_cripto(self, df_ativo, coin_id, ticker, nome_ativo):
         """
@@ -264,40 +193,6 @@ class PatrimonioCalculator:
             "PrecoCripto": preco_atual,
             "ValorReais": saldo_total * preco_atual
         }])
-
-    def _calcular_criptos_historico(self):
-        """
-        Calcula evolução histórica de criptomoedas (exceto BTC, que segue em fluxo dedicado).
-        """
-        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
-        df_cripto = self.df_inv[
-            (~tipo_normalizado.isin(["BTC", "CDI"])) & (tipo_normalizado != "")
-        ].copy()
-
-        if df_cripto.empty:
-            return pd.DataFrame()
-
-        resultados = []
-        for ticker in sorted(df_cripto["Tipo"].unique()):
-            ativo = self._resolver_ativo_cripto(ticker)
-            if not ativo or not ativo.get("id"):
-                print(f"⚠️ Ticker não reconhecido para cripto: {ticker}")
-                continue
-
-            df_ticker = df_cripto[df_cripto["Tipo"] == ticker].copy()
-            hist = self._calcular_historico_ativo_cripto(
-                df_ticker,
-                coin_id=ativo["id"],
-                ticker=ticker,
-                nome_ativo=ativo["nome"]
-            )
-            if not hist.empty:
-                resultados.append(hist)
-
-        if not resultados:
-            return pd.DataFrame()
-
-        return pd.concat(resultados, ignore_index=True).sort_values(["DataHora", "Ticker"])
 
     def _calcular_criptos_snapshot(self):
         """
@@ -343,38 +238,6 @@ class PatrimonioCalculator:
 
         return pd.DataFrame(linhas)
 
-    def _calcular_bitcoin(self):
-        """
-        Calcula evolução do investimento em BTC com cotação histórica
-        Mantém precisão de Date/Time nas transações
-        """
-        df_btc = self.df_inv[self.df_inv["Tipo"] == "BTC"].copy()
-
-        if df_btc.empty:
-            return pd.DataFrame()
-
-        # Remove transações com data inválida
-        df_btc = df_btc[df_btc["Data"].notna()]
-        
-        if df_btc.empty:
-            print("⚠️ Nenhuma transação BTC com data válida")
-            return pd.DataFrame()
-
-        historico_btc = self._calcular_historico_ativo_cripto(
-            df_btc,
-            coin_id="bitcoin",
-            ticker="BTC",
-            nome_ativo="Bitcoin"
-        )
-
-        if historico_btc.empty:
-            return pd.DataFrame()
-
-        historico_btc = historico_btc.rename(
-            columns={"SaldoCripto": "SaldoBTC", "PrecoCripto": "PrecoBTC"}
-        )
-        return historico_btc[["DataHora", "SaldoBTC", "PrecoBTC", "ValorReais"]]
-    
     def _calcular_bitcoin_snapshot(self):
         """
         Calcula snapshot atual do investimento em BTC
