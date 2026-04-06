@@ -9,6 +9,9 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 🔥 já garante compatibilidade futura
+
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
