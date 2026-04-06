@@ -38,14 +38,14 @@ class FluxoCaixaProcessor:
         """
         df_compras = self.dados['compras']
 
-        for _, r in df_compras.iterrows():
-            data = r["Data"]
+        for r in df_compras.itertuples():
+            data = r.Data
             if pd.isna(data): 
                 continue
 
-            total = r["ValorTotal"]
-            n_parc = int(r["Parcelas"]) if pd.notna(r["Parcelas"]) and r["Parcelas"] != "" else 1
-            primeira_fat = calcular_mes_competencia(data)
+            total = r.ValorTotal
+            n_parc = int(r.Parcelas) if pd.notna(r.Parcelas) and r.Parcelas != "" else 1
+            primeira_fat = calcular_mes_competencia(data, getattr(r, 'Cartao', ''))
 
             if pd.isna(primeira_fat): 
                 continue
@@ -61,9 +61,9 @@ class FluxoCaixaProcessor:
                     "DataCompetencia": mes_ref, 
                     "Tipo": "Saída", 
                     "Metodo": "Cartão de Crédito",
-                    "Conta_Cartao": r["Cartao"], 
-                    "Categoria": r["Categoria"], 
-                    "Descricao": f"{r['Descricao']} ({i+1}/{n_parc})",
+                    "Conta_Cartao": getattr(r, 'Cartao', ''), 
+                    "Categoria": getattr(r, 'Categoria', ''), 
+                    "Descricao": f"{getattr(r, 'Descricao', '')} ({i+1}/{n_parc})",
                     "Valor": valores[i], 
                     "Status": "Aguardando Fatura"
                 })
@@ -76,14 +76,14 @@ class FluxoCaixaProcessor:
         df_pix["QtdPagas"] = pd.to_numeric(df_pix["QtdPagas"], errors="coerce").fillna(0).astype(int)
         df_pix["ValorEntrada"] = pd.to_numeric(df_pix["ValorEntrada"], errors="coerce").fillna(df_pix["ValorTotal"]/4)
 
-        for _, r in df_pix.iterrows():
-            data = r["Data"]
+        for r in df_pix.itertuples():
+            data = r.Data
             if pd.isna(data): 
                 continue
 
-            total = r["ValorTotal"]
-            entrada = r["ValorEntrada"]
-            qtd_pagas = r["QtdPagas"]
+            total = r.ValorTotal
+            entrada = r.ValorEntrada
+            qtd_pagas = r.QtdPagas
             saldo = total - entrada
             valores = [entrada, round(saldo/3, 2), round(saldo/3, 2), round(total - (entrada + 2*round(saldo/3, 2)), 2)]
 
@@ -99,8 +99,8 @@ class FluxoCaixaProcessor:
                     "Tipo": "Saída", 
                     "Metodo": "Pix Parcelado",
                     "Conta_Cartao": "Conta Corrente", 
-                    "Categoria": r["Categoria"], 
-                    "Descricao": f"{r['Descricao']} ({num}/4)",
+                    "Categoria": getattr(r, 'Categoria', ''), 
+                    "Descricao": f"{getattr(r, 'Descricao', '')} ({num}/4)",
                     "Valor": valores[i], 
                     "Status": "Pago" if pago else "Pendente"
                 })
@@ -113,16 +113,17 @@ class FluxoCaixaProcessor:
         hoje = pd.Timestamp.today().normalize()
         fim_projecao = (hoje + DateOffset(months=6)).to_period("M").to_timestamp()
 
-        for _, r in df_assin.iterrows():
-            ativa = r["Ativa"] == True or str(r["Ativa"]).upper() == "TRUE"
+        for r in df_assin.itertuples():
+            ativa = getattr(r, 'Ativa', False) == True or str(getattr(r, 'Ativa', '')).upper() == "TRUE"
             if not ativa: 
                 continue
 
-            inicio = r["Inicio"]
+            inicio = r.Inicio
             if pd.isna(inicio): 
                 continue
 
-            fim = r["Fim"] if pd.notna(r["Fim"]) else fim_projecao
+            fim_val = getattr(r, 'Fim', pd.NaT)
+            fim = fim_val if pd.notna(fim_val) else fim_projecao
             if fim < inicio: 
                 continue
 
@@ -142,17 +143,17 @@ class FluxoCaixaProcessor:
                 for data_cob in datas_ajustadas:
                     self.lista_movimentacoes.append({
                         "DataOriginal": data_cob, 
-                        "DataCompetencia": calcular_mes_competencia(data_cob), 
+                        "DataCompetencia": calcular_mes_competencia(data_cob, getattr(r, 'Cartao', '')), 
                         "Tipo": "Saída",
                         "Metodo": "Assinatura Recorrente", 
-                        "Conta_Cartao": r["Cartao"], 
-                        "Categoria": r["Categoria"],
-                        "Descricao": f"{r['Nome']} (Assinatura)", 
-                        "Valor": float(r["Valor"]), 
+                        "Conta_Cartao": getattr(r, 'Cartao', ''), 
+                        "Categoria": getattr(r, 'Categoria', ''),
+                        "Descricao": f"{getattr(r, 'Nome', '')} (Assinatura)", 
+                        "Valor": float(getattr(r, 'Valor', 0)), 
                         "Status": "Aguardando Fatura"
                     })
             except Exception as e:
-                print(f"Erro ao processar assinatura {r['Nome']}: {e}")
+                print(f"Erro ao processar assinatura {getattr(r, 'Nome', '')}: {e}")
 
     def processar_debitos(self):
         """
@@ -160,18 +161,18 @@ class FluxoCaixaProcessor:
         """
         df_debito = self.dados['debitos']
 
-        for _, r in df_debito.iterrows():
-            if pd.isna(r["Data"]): 
+        for r in df_debito.itertuples():
+            if pd.isna(r.Data): 
                 continue
             self.lista_movimentacoes.append({
-                "DataOriginal": r["Data"], 
-                "DataCompetencia": r["Data"].to_period("M").to_timestamp(), 
+                "DataOriginal": r.Data, 
+                "DataCompetencia": r.Data.to_period("M").to_timestamp(), 
                 "Tipo": "Saída",
                 "Metodo": "Débito/Dinheiro", 
-                "Conta_Cartao": r["ContaSaida"], 
-                "Categoria": r["Categoria"],
-                "Descricao": r["Descricao"], 
-                "Valor": float(r["Valor"]), 
+                "Conta_Cartao": getattr(r, 'ContaSaida', ''), 
+                "Categoria": getattr(r, 'Categoria', ''),
+                "Descricao": getattr(r, 'Descricao', ''), 
+                "Valor": float(getattr(r, 'Valor', 0)), 
                 "Status": "Pago"
             })
 
@@ -181,18 +182,18 @@ class FluxoCaixaProcessor:
         """
         df_receitas = self.dados['receitas']
 
-        for _, r in df_receitas.iterrows():
-            if pd.isna(r["Data"]): 
+        for r in df_receitas.itertuples():
+            if pd.isna(r.Data): 
                 continue
             self.lista_movimentacoes.append({
-                "DataOriginal": r["Data"], 
-                "DataCompetencia": r["Data"].to_period("M").to_timestamp(), 
+                "DataOriginal": r.Data, 
+                "DataCompetencia": r.Data.to_period("M").to_timestamp(), 
                 "Tipo": "Entrada",
                 "Metodo": "Depósito/Salário", 
-                "Conta_Cartao": r["ContaDestino"], 
-                "Categoria": r["Categoria"],
-                "Descricao": r["Descricao"], 
-                "Valor": float(r["Valor"]), 
+                "Conta_Cartao": getattr(r, 'ContaDestino', ''), 
+                "Categoria": getattr(r, 'Categoria', ''),
+                "Descricao": getattr(r, 'Descricao', ''), 
+                "Valor": float(getattr(r, 'Valor', 0)), 
                 "Status": "Recebido"
             })
 

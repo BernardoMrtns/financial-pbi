@@ -43,15 +43,9 @@ def carregar_aba(spreadsheet, nome_aba, colunas_esperadas):
 
 def salvar_aba(spreadsheet, nome_aba, df):
     """
-    Salva um DataFrame em uma aba do Google Sheets
+    Salva um DataFrame em uma aba do Google Sheets (Usando Padrão Swap para segurança)
     Para abas de snapshot de cripto, preserva Date/Time completo para maior precisão
     """
-    try:
-        worksheet = spreadsheet.worksheet(nome_aba)
-        worksheet.clear()
-    except:
-        worksheet = spreadsheet.add_worksheet(title=nome_aba, rows=1000, cols=20)
-
     df_copy = df.copy()
     # Converte datas para string
     for col in df_copy.columns:
@@ -69,7 +63,29 @@ def salvar_aba(spreadsheet, nome_aba, df):
 
     # Prepara lista de listas para upload
     dados_upload = [df_copy.columns.values.tolist()] + df_copy.values.tolist()
-    worksheet.update(dados_upload)
+    
+    nome_aba_temp = f"{nome_aba}_temp"
+    
+    # 1. Remove aba temporária se existir (resíduo de erro anterior)
+    try:
+        ws_temp = spreadsheet.worksheet(nome_aba_temp)
+        spreadsheet.del_worksheet(ws_temp)
+    except Exception:
+        pass
+        
+    # 2. Cria aba temporária e envia os dados
+    linhas = max(1000, len(dados_upload) + 10)
+    ws_temp = spreadsheet.add_worksheet(title=nome_aba_temp, rows=linhas, cols=max(20, len(df_copy.columns)))
+    ws_temp.update(dados_upload)
+    
+    # 3. Remove aba antiga original e renomeia a temporária
+    try:
+        ws_antiga = spreadsheet.worksheet(nome_aba)
+        spreadsheet.del_worksheet(ws_antiga)
+    except Exception:
+        pass
+        
+    ws_temp.update_title(nome_aba)
 
 
 def adicionar_linha_aba(spreadsheet, nome_aba, df_nova_linha):

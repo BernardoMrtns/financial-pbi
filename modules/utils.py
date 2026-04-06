@@ -1,77 +1,33 @@
 import pandas as pd
 import requests
 from pandas.tseries.offsets import DateOffset
-from config import DIA_FECHAMENTO_CARTAO
+from config import FECHAMENTO_CARTOES
 
 
 def converter_data_flexivel(series, preservar_hora=False):
     """
     Converte datas em múltiplos formatos (Serial Date do Excel, dd/mm/yyyy ou dd/mm/yyyy hh:mm:ss)
-    Otimizado para formato brasileiro
-    
-    Args:
-        series: Série com datas para converter
-        preservar_hora: Se True, mantém informação de hora quando disponível
+    Otimizado e vetorizado para alta performance.
     """
-    # Força dtype para datetime64[ns] para suportar precisão de nanosegundos
-    result = pd.Series([pd.NaT] * len(series), index=series.index, dtype='datetime64[ns]')
+    s = series.copy().astype(object)
+    s = s.replace({'': pd.NaT, 'nan': pd.NaT, 'None': pd.NaT})
     
-    for idx, valor in series.items():
-        # Ignora valores vazios
-        if pd.isna(valor) or valor == '' or valor == 'NaT':
-            continue
-        
-        # 1. Tenta converter valores numéricos (Serial Date do Excel)
-        # Aceita int, float e tipos numéricos do pandas/numpy
-        try:
-            valor_numerico = pd.to_numeric(valor, errors='coerce')
-            if pd.notna(valor_numerico):
-                # Serial date do Excel: quantidade de dias desde 30/12/1899
-                # Converte para timestamp pandas
-                excel_epoch = pd.Timestamp('1899-12-30')
-                dias = pd.Timedelta(days=float(valor_numerico))
-                data_convertida = excel_epoch + dias
-                result[idx] = data_convertida
-                continue
-        except:
-            pass
-        
-        # 2. Tenta converter strings - FORMATO BRASILEIRO PRIORITÁRIO
-        if isinstance(valor, str):
-            # Remove espaços extras
-            valor = valor.strip()
-            
-            # Fix: Google Sheets às vezes exporta com formato errado (16:24:00:00)
-            # Corrige formato com segundos duplicados
-            if valor.count(':') == 3:  # hh:mm:ss:00 (erro do Sheets)
-                partes = valor.split(':')
-                if len(partes) == 4:
-                    valor = ':'.join(partes[:3])  # Remove o último :00
-            
-            # Tenta formatos brasileiros explicitamente
-            formatos_br = [
-                '%d/%m/%Y %H:%M:%S',  # 08/02/2026 14:30:00
-                '%d/%m/%Y %H:%M',     # 08/02/2026 14:30
-                '%d/%m/%Y',           # 08/02/2026
-                '%d-%m-%Y %H:%M:%S',  # 08-02-2026 14:30:00
-                '%d-%m-%Y',           # 08-02-2026
-            ]
-            
-            for formato in formatos_br:
-                try:
-                    result[idx] = pd.to_datetime(valor, format=formato)
-                    break
-                except:
-                    continue
-            
-            # Se ainda não converteu, tenta com dayfirst=True (genérico)
-            if pd.isna(result[idx]):
-                try:
-                    result[idx] = pd.to_datetime(valor, dayfirst=True)
-                except:
-                    pass
+    # 1. Tratar numéricos (Excel serial date)
+    is_numeric = pd.to_numeric(s, errors='coerce').notna() & ~s.apply(lambda x: isinstance(x, str) and (':' in x or '/' in x or '-' in x))
+    if is_numeric.any():
+        excel_epoch = pd.Timestamp('1899-12-30')
+        s.loc[is_numeric] = excel_epoch + pd.to_timedelta(pd.to_numeric(s.loc[is_numeric]), unit='D')
     
-    # Se não deve preservar hora, normaliza para meia-noite
+    # 2. Corrigir formato "16:24:00:00" do Google Sheets
+    is_str = s.apply(lambda x: isinstance(x, str))
+    if is_str.any():
+        s.loc[is_str] = s.loc[is_str].apply(
+            lambda x: ':'.join(x.split(':')[:3]) if isinstance(x, str) and x.count(':') == 3 else x
+        )
+    
+    # 3. Conversão vetorizada
+    result = pd.to_datetime(s, dayfirst=True, errors='coerce')
+    
     if not preservar_hora:
         result = result.dt.normalize()
     
@@ -95,13 +51,14 @@ def converter_numero_flexivel(series):
     return pd.to_numeric(s, errors='coerce').fillna(0.0)
 
 
-def calcular_mes_competencia(data_compra):
+def calcular_mes_competencia(data_compra, cartao=""):
     """
     Calcula o mês de competência com base no dia de fechamento do cartão
     """
     if pd.isna(data_compra): 
         return pd.NaT
-    if data_compra.day <= DIA_FECHAMENTO_CARTAO:
+    dia_fechamento = FECHAMENTO_CARTOES.get(cartao, 8)
+    if data_compra.day <= dia_fechamento:
         return data_compra.to_period("M").to_timestamp()
     else:
         return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()
