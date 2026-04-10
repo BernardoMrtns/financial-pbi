@@ -51,7 +51,7 @@ def salvar_aba(spreadsheet, nome_aba, df):
     for col in df_copy.columns:
         if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
             # Para snapshots de cripto, usa formato com data e hora completa
-            if nome_aba in {"InvestimentoBTC", "InvestimentoCripto"}:
+            if nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI"}:
                 df_copy[col] = df_copy[col].dt.strftime('%d/%m/%Y %H:%M:%S')
             else:
                 # Outras abas usam apenas data

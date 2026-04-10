@@ -5,7 +5,7 @@ from .google_sheets import conectar_google_sheets, carregar_aba, salvar_aba, adi
 from .data_loader import DataLoader
 from .data_processor import FluxoCaixaProcessor
 from .patrimonio import PatrimonioCalculator
-from .utils import converter_data_flexivel, calcular_mes_competencia, obter_cdi_historico
+from .utils import converter_data_flexivel, calcular_mes_competencia, obter_cdi_historico, calcular_fator_cdi_periodo
 
 __all__ = [
     'conectar_google_sheets',
@@ -16,5 +16,6 @@ __all__ = [
     'PatrimonioCalculator',
     'converter_data_flexivel',
     'calcular_mes_competencia',
-    'obter_cdi_historico'
+    'obter_cdi_historico',
+    'calcular_fator_cdi_periodo'
 ]

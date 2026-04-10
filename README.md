@@ -67,7 +67,7 @@ Classe `FluxoCaixaProcessor`: Processa movimentações:
 
 ### modules/patrimonio.py
 Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
-- CDI (corrigido diariamente)
+- CDI (corrigido com precisão temporal e taxa diária do Bacen)
 - Bitcoin (com lógica exclusiva)
 - Criptomoedas genéricas por ticker (ex.: SOL, XRP, ETH)
 
@@ -87,3 +87,5 @@ Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
 - InvestimentoBTC
 - InvestimentoCripto
 - InvestimentoCDI
+
+`InvestimentoCDI` registra a evolução com timestamp completo para preservar a leitura horária do rendimento.
