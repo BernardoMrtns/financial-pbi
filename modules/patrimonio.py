@@ -4,7 +4,7 @@ Módulo para cálculo de patrimônio (CDI e Bitcoin)
 import pandas as pd
 import requests
 import datetime
-from modules.utils import obter_cdi_historico, converter_numero_flexivel
+from modules.utils import obter_cdi_historico, calcular_fator_cdi_periodo, converter_numero_flexivel
 
 
 class PatrimonioCalculator:
@@ -71,7 +71,7 @@ class PatrimonioCalculator:
 
     def _calcular_cdi(self):
         """
-        Calcula evolução do CDI com correção diária
+        Calcula evolução do CDI usando a série diária do Bacen com precisão temporal.
         """
         tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
         df_movimentos_cdi = self.df_inv[tipo_normalizado.eq("CDI")].copy()
@@ -79,36 +79,52 @@ class PatrimonioCalculator:
         if df_movimentos_cdi.empty:
             return pd.DataFrame()
 
-        # O patrimônio em CDI é diário: normaliza timestamps para evitar perder
-        # aportes/resgates com hora diferente de 00:00:00 no merge da série.
-        df_movimentos_cdi["DataDia"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce").dt.normalize()
-        df_movimentos_cdi = df_movimentos_cdi[df_movimentos_cdi["DataDia"].notna()].copy()
+        df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce")
+        df_movimentos_cdi = df_movimentos_cdi[df_movimentos_cdi["DataHora"].notna()].copy()
 
         if df_movimentos_cdi.empty:
             return pd.DataFrame()
 
-        data_min = df_movimentos_cdi["DataDia"].min()
-        datas_full = pd.date_range(start=data_min, end=self.hoje, freq='D')
+        df_movimentos_cdi = df_movimentos_cdi.sort_values(["DataHora"], kind="mergesort").copy()
+
+        data_min = df_movimentos_cdi["DataHora"].min().normalize()
         df_historico_cdi = obter_cdi_historico(data_min)
 
-        df_final_cdi = pd.DataFrame(index=datas_full)
-        df_final_cdi.index.name = "Data"
-        df_final_cdi = df_final_cdi.reset_index()
+        saldo_atual = 0.0
+        timestamp_anterior = None
+        linhas = []
 
-        fluxo_diario = df_movimentos_cdi.groupby("DataDia")["ValorLiquido"].sum().reset_index()
-        fluxo_diario = fluxo_diario.rename(columns={"DataDia": "Data"})
-        df_final_cdi = df_final_cdi.merge(fluxo_diario, on="Data", how="left").fillna(0)
-        df_final_cdi = df_final_cdi.merge(df_historico_cdi, on="Data", how="left")
-        df_final_cdi["FatorDiario"] = df_final_cdi["FatorDiario"].fillna(1.0)
+        for _, row in df_movimentos_cdi.iterrows():
+            timestamp_atual = row["DataHora"]
 
-        saldo_atual = 0
-        saldos = []
-        for _, row in df_final_cdi.iterrows():
-            saldo_atual = (saldo_atual * row["FatorDiario"]) + row["ValorLiquido"]
-            saldos.append(saldo_atual)
+            if timestamp_anterior is not None:
+                fator_intervalo = calcular_fator_cdi_periodo(
+                    timestamp_anterior,
+                    timestamp_atual,
+                    df_historico_cdi
+                )
+                saldo_atual *= fator_intervalo
 
-        df_final_cdi["ValorCDI"] = saldos
-        return df_final_cdi[["Data", "ValorCDI"]]
+            saldo_atual += row["ValorLiquido"]
+            linhas.append({
+                "Data": timestamp_atual,
+                "ValorCDI": saldo_atual,
+            })
+            timestamp_anterior = timestamp_atual
+
+        if timestamp_anterior is not None:
+            agora = pd.Timestamp.now()
+            saldo_corrente = saldo_atual * calcular_fator_cdi_periodo(
+                timestamp_anterior,
+                agora,
+                df_historico_cdi
+            )
+            linhas.append({
+                "Data": agora,
+                "ValorCDI": saldo_corrente,
+            })
+
+        return pd.DataFrame(linhas)
 
     def _resolver_ativo_cripto(self, ticker):
         """

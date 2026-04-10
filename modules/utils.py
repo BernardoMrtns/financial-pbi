@@ -69,13 +69,69 @@ def obter_cdi_historico(data_inicio):
     Busca histórico de CDI na API do Banco Central
     """
     try:
-        data_str = data_inicio.strftime("%d/%m/%Y")
+        data_inicio = pd.Timestamp(data_inicio).normalize()
+        data_fim = pd.Timestamp.today().normalize()
+        data_busca = data_inicio - pd.Timedelta(days=30)
+
+        data_str = data_busca.strftime("%d/%m/%Y")
         url = f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial={data_str}"
         r = requests.get(url, timeout=10).json()
         df_cdi = pd.DataFrame(r)
+        if df_cdi.empty:
+            return pd.DataFrame(columns=["Data", "FatorDiario"])
+
         df_cdi["Data"] = pd.to_datetime(df_cdi["data"], format="%d/%m/%Y")
-        df_cdi["Taxa"] = pd.to_numeric(df_cdi["valor"], errors="coerce")
+        df_cdi["Taxa"] = pd.to_numeric(
+            df_cdi["valor"].astype(str).str.replace(",", ".", regex=False),
+            errors="coerce"
+        )
         df_cdi["FatorDiario"] = 1 + (df_cdi["Taxa"] / 100)
-        return df_cdi[["Data", "FatorDiario"]]
-    except:
+        df_cdi = df_cdi.dropna(subset=["Data", "FatorDiario"]).sort_values("Data")
+
+        indice_calendario = pd.date_range(start=data_inicio, end=data_fim, freq="D")
+        if indice_calendario.empty:
+            return pd.DataFrame(columns=["Data", "FatorDiario"])
+
+        df_cdi = df_cdi.set_index("Data").reindex(indice_calendario)
+        df_cdi.index.name = "Data"
+        df_cdi["FatorDiario"] = df_cdi["FatorDiario"].ffill().bfill().fillna(1.0)
+        return df_cdi.reset_index()[["Data", "FatorDiario"]]
+    except Exception:
         return pd.DataFrame(columns=["Data", "FatorDiario"])
+
+
+def calcular_fator_cdi_periodo(data_inicio, data_fim, df_historico_cdi):
+    """
+    Calcula o fator acumulado do CDI entre dois timestamps.
+
+    A série do Bacen é diária, mas o cálculo é repartido proporcionalmente
+    pelo tempo decorrido em cada dia do intervalo.
+    """
+    if df_historico_cdi.empty:
+        return 1.0
+
+    inicio = pd.Timestamp(data_inicio)
+    fim = pd.Timestamp(data_fim)
+
+    if pd.isna(inicio) or pd.isna(fim) or fim <= inicio:
+        return 1.0
+
+    historico = df_historico_cdi.copy()
+    historico["Data"] = pd.to_datetime(historico["Data"], errors="coerce").dt.normalize()
+    historico["FatorDiario"] = pd.to_numeric(historico["FatorDiario"], errors="coerce").fillna(1.0)
+    fatores = historico.dropna(subset=["Data"]).set_index("Data")["FatorDiario"].to_dict()
+
+    fator_acumulado = 1.0
+    cursor = inicio
+
+    while cursor < fim:
+        inicio_dia = cursor.normalize()
+        proximo_dia = inicio_dia + pd.Timedelta(days=1)
+        limite = min(fim, proximo_dia)
+        segundos_no_trecho = (limite - cursor).total_seconds()
+        fracao_dia = segundos_no_trecho / 86400
+        fator_dia = fatores.get(inicio_dia, 1.0)
+        fator_acumulado *= fator_dia ** fracao_dia
+        cursor = limite
+
+    return fator_acumulado
