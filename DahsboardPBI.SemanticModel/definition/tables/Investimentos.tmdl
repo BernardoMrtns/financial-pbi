@@ -1,0 +1,71 @@
+table Investimentos
+	lineageTag: 646a75d2-7f30-42a2-aaa7-a401c7f93119
+
+	column Data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: a7a0ac7c-2719-4ee8-bee1-86e5a35c7794
+		summarizeBy: none
+		sourceColumn: Data
+
+		variation Variation
+			isDefault
+			relationship: 92386d8a-39d2-4bc5-b092-7307a1cdc3c5
+			defaultHierarchy: LocalDateTable_78193e95-7ae4-4d35-ad2b-29c1f14ae9c1.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Tipo
+		dataType: string
+		lineageTag: 63bc402e-49fb-48ba-945e-3bdf93c49813
+		summarizeBy: none
+		sourceColumn: Tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	column Operacao
+		dataType: string
+		lineageTag: 44a623bd-093a-49b8-9a7b-9f0af2b50e39
+		summarizeBy: none
+		sourceColumn: Operacao
+
+		annotation SummarizationSetBy = Automatic
+
+	column Valor
+		dataType: decimal
+		formatString: "R$"\ #,0.###############;-"R$"\ #,0.###############;"R$"\ #,0.###############
+		lineageTag: 0d914585-7b7f-4262-827a-6da467ed9b3f
+		summarizeBy: sum
+		sourceColumn: Valor
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
+
+	column QuantidadeBTC
+		dataType: double
+		lineageTag: 4f433283-8054-410b-83e2-ea96f5102e15
+		summarizeBy: sum
+		sourceColumn: QuantidadeBTC
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition Investimentos = m
+		mode: import
+		source =
+				let
+				    Fonte = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    Investimentos_Table = Fonte{[name="Investimentos",ItemKind="Table"]}[Data],
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(Investimentos_Table, [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"Data", type date}, {"Tipo", type text}, {"Operacao", type text}, {"Valor", Currency.Type}, {"QuantidadeBTC", type number}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

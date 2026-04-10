@@ -1,0 +1,35 @@
+table Limites
+	lineageTag: 3eb255e6-5282-4ea0-af24-78669d51acda
+
+	column Cartao
+		dataType: string
+		lineageTag: 9dbc3ed6-bd9f-41ad-9ed8-190940695fa9
+		summarizeBy: none
+		sourceColumn: Cartao
+
+		annotation SummarizationSetBy = Automatic
+
+	column LimiteTotal
+		dataType: int64
+		formatString: 0
+		lineageTag: 679fe780-0199-40d2-938c-96fabad694f5
+		summarizeBy: sum
+		sourceColumn: LimiteTotal
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Limites = m
+		mode: import
+		source =
+				let
+				    Source = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    Limites_Table = Source{[name="Limites",ItemKind="Table"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(Limites_Table, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Cartao", type text}, {"LimiteTotal", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

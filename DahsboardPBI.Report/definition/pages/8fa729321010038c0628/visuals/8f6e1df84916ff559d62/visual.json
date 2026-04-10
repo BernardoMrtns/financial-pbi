@@ -1,0 +1,160 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "8f6e1df84916ff559d62",
+  "position": {
+    "x": 640.45486851457008,
+    "y": 359.34612651030562,
+    "z": 1000,
+    "height": 360.25586353944567,
+    "width": 639.54513148543,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "WishlistCssBuy"
+                    }
+                  },
+                  "Property": "Item"
+                }
+              },
+              "queryRef": "WishlistCssBuy.Item",
+              "nativeQueryRef": "Item"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "WishlistCssBuy"
+                        }
+                      },
+                      "Property": "Preço ¥"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(WishlistCssBuy.Preço ¥)",
+              "nativeQueryRef": "Soma de Preço ¥"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "WishlistCssBuy"
+                        }
+                      },
+                      "Property": "Preço BRL"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(WishlistCssBuy.Preço BRL)",
+              "nativeQueryRef": "Soma de Preço BRL"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "WishlistCssBuy"
+                    }
+                  },
+                  "Property": "Peso Aproximado"
+                }
+              },
+              "queryRef": "WishlistCssBuy.Peso Aproximado",
+              "nativeQueryRef": "Peso Aproximado"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Aggregation": {
+                "Expression": {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Entity": "WishlistCssBuy"
+                      }
+                    },
+                    "Property": "Preço BRL"
+                  }
+                },
+                "Function": 0
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "grid": [
+        {
+          "properties": {}
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "stylePreset": [
+        {
+          "properties": {
+            "name": {
+              "expr": {
+                "Literal": {
+                  "Value": "'AlternatingRowsNew'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,73 @@
+table Wishlist
+	lineageTag: 48e8d9b0-e5b8-4823-9d8b-a35a680ef4de
+
+	column Nome
+		dataType: string
+		lineageTag: 34a98943-fdd7-46bf-9c37-04822f2aa4b0
+		summarizeBy: none
+		sourceColumn: Nome
+
+		annotation SummarizationSetBy = Automatic
+
+	column Preço
+		dataType: decimal
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		lineageTag: be020c14-bb80-45ea-be7b-8691ada68a63
+		summarizeBy: sum
+		sourceColumn: Preço
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
+
+	column Categoria
+		dataType: string
+		lineageTag: ab50b780-3eaa-46c6-b62d-77c6026def43
+		summarizeBy: none
+		sourceColumn: Categoria
+
+		annotation SummarizationSetBy = Automatic
+
+	column Prioridade
+		dataType: string
+		lineageTag: a0d68c2d-d120-47c3-931e-b35c85e4d83b
+		summarizeBy: none
+		sourceColumn: Prioridade
+		sortByColumn: Ordem_Prioridade
+
+		changedProperty = SortByColumn
+
+		annotation SummarizationSetBy = Automatic
+
+	column Link
+		dataType: string
+		lineageTag: 1406fdba-7f8c-42f7-b8f2-fcd7a01f5351
+		summarizeBy: none
+		sourceColumn: Link
+
+		annotation SummarizationSetBy = Automatic
+
+	column Ordem_Prioridade
+		dataType: string
+		lineageTag: 1866afaf-af26-482e-b727-319e153174d6
+		summarizeBy: none
+		sourceColumn: Ordem_Prioridade
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Wishlist = m
+		mode: import
+		source =
+				let
+				    Fonte = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    Wishlist_Table = Fonte{[name="Wishlist",ItemKind="Table"]}[Data],
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(Wishlist_Table, [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"Nome", type text}, {"Preço", Currency.Type}, {"Categoria", type text}, {"Prioridade", type text}, {"Link", type text}}),
+				    #"Coluna Condicional Adicionada" = Table.AddColumn(#"Tipo Alterado", "Ordem_Prioridade", each if [Prioridade] = "Low" then 1 else if [Prioridade] = "Mid" then 2 else if [Prioridade] = "High" then 3 else null)
+				in
+				    #"Coluna Condicional Adicionada"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

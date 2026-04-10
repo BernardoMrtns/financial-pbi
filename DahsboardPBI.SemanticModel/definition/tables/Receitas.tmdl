@@ -1,0 +1,63 @@
+table Receitas
+	lineageTag: fa0ad25c-7db6-4847-85ca-62719a0a3f0e
+
+	column Data
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 722b24de-a5d6-4be4-ac2f-00ccef930878
+		summarizeBy: none
+		sourceColumn: Data
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Descricao
+		dataType: string
+		lineageTag: 5873ee04-b2fc-40c9-938a-630f1688a194
+		summarizeBy: none
+		sourceColumn: Descricao
+
+		annotation SummarizationSetBy = Automatic
+
+	column Categoria
+		dataType: string
+		lineageTag: ae93a2da-fdc6-4ee9-8ef1-ca6e2d114b13
+		summarizeBy: none
+		sourceColumn: Categoria
+
+		annotation SummarizationSetBy = Automatic
+
+	column Valor
+		dataType: double
+		lineageTag: 354c5c6f-6750-4eca-824a-3855ca818d36
+		summarizeBy: sum
+		sourceColumn: Valor
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column ContaDestino
+		dataType: string
+		lineageTag: faeb8b64-d4f7-4238-aec0-df25e86f9ce5
+		summarizeBy: none
+		sourceColumn: ContaDestino
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Receitas = m
+		mode: import
+		source =
+				let
+				    Source = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    Receitas_Table = Source{[name="Receitas",ItemKind="Table"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(Receitas_Table, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Data", type date}, {"Descricao", type text}, {"Categoria", type text}, {"Valor", type number}, {"ContaDestino", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

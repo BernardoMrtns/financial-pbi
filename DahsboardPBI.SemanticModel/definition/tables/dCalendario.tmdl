@@ -1,0 +1,112 @@
+table dCalendario
+	lineageTag: 1122d903-6c40-49bf-9d49-1ecb12147e37
+
+	column Date
+		formatString: dd/mm/yyyy
+		lineageTag: df66db75-a411-402d-b8c5-e1d272cf2414
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		variation Variation
+			isDefault
+			relationship: 29e8c926-73fa-482e-aeb8-e2bc85240ff7
+			defaultHierarchy: LocalDateTable_29b01095-8ae8-4824-8c6c-e16377eb353e.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isCustom":true}
+
+	column Ano
+		formatString: 0
+		lineageTag: a19c9e96-8007-4b3c-a39a-6d80b79caec4
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Ano]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Mês
+		lineageTag: c3e4b322-ccf0-4544-b70b-84ae45a645db
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Mês]
+		sortByColumn: 'Mês Num'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mês Abrev'
+		lineageTag: 02f48375-dfc1-4de7-924e-653e13829565
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Mês Abrev]
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mês Num'
+		formatString: 0
+		lineageTag: 51e6dab7-d0fe-4082-844f-70483539e409
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Mês Num]
+
+		annotation SummarizationSetBy = Automatic
+
+	column AnoMês
+		dataType: dateTime
+		formatString: mmmm" de "yyyy
+		lineageTag: 91b65c78-1bb9-4676-9706-a7a41d541fad
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [AnoMês]
+
+		variation Variation
+			isDefault
+			relationship: 06a3bf35-9c3e-4b87-8e17-d24836302ead
+			defaultHierarchy: LocalDateTable_3beb0620-397f-4c2c-92c9-89869436526d.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation PBI_FormatHint = {"isDateTimeCustom":true}
+
+	column Trimestre
+		lineageTag: ba5389d2-b1c7-410b-a803-b91fc469d663
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Trimestre]
+
+		annotation SummarizationSetBy = Automatic
+
+	column DateTime
+		formatString: General Date
+		lineageTag: 6014e7ab-4037-496e-80e2-8bc5460b0b56
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [DateTime]
+
+		variation Variation
+			isDefault
+			relationship: 8c15aa62-3521-4750-965b-c85ad052a084
+			defaultHierarchy: LocalDateTable_093431a2-138a-4402-aade-5a361771b112.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dCalendario = calculated
+		mode: import
+		source =
+				
+				ADDCOLUMNS (
+				    CALENDARAUTO(),
+				    "DateTime", [Date] + TIME(0,0,0),
+				    "Ano", YEAR([Date]),
+				    "Mês", FORMAT([Date], "mmmm"),
+				    "Mês Abrev", FORMAT([Date], "mmm"),
+				    "Mês Num", MONTH([Date]),
+				    "AnoMês", FORMAT([Date], "yyyy-MM"),
+				    "Trimestre", "T" & QUARTER([Date])
+				)
+
+	annotation PBI_Id = dda0cc2bf0b7430891a7b11233b816ca
+

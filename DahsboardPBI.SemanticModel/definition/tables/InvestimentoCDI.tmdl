@@ -1,0 +1,38 @@
+table InvestimentoCDI
+	lineageTag: 753b0e65-b612-4aaf-850e-fae2fc2176e4
+
+	column Data
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 99bdc7cf-f117-4838-8f3f-1f390f999973
+		summarizeBy: none
+		sourceColumn: Data
+
+		annotation SummarizationSetBy = Automatic
+
+	column ValorCDI
+		dataType: double
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		lineageTag: c5432bf5-3b4d-4afe-a851-e4f98aff960e
+		summarizeBy: none
+		sourceColumn: ValorCDI
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
+
+	partition InvestimentoCDI = m
+		mode: import
+		source =
+				let
+				    Source = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    InvestimentoCDI_Table = Source{[name="InvestimentoCDI",ItemKind="Table"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(InvestimentoCDI_Table, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Data", type datetime}, {"ValorCDI", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Exception
+

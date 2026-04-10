@@ -1,0 +1,70 @@
+table WishlistCssBuy
+	lineageTag: ab88419d-a632-47d8-a3f9-f7db89df6fbc
+
+	column Item
+		dataType: string
+		lineageTag: 243dbdb0-45cf-4fc9-8395-bef52cbcd0bb
+		summarizeBy: none
+		sourceColumn: Item
+
+		annotation SummarizationSetBy = Automatic
+
+	column Categoria
+		dataType: string
+		lineageTag: 011a38e3-abb4-4c8e-9db2-83af52cad381
+		summarizeBy: none
+		sourceColumn: Categoria
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Preço ¥'
+		dataType: decimal
+		formatString: "¥"#,0.00;"¥"-#,0.00;"¥"#,0.00
+		lineageTag: 2e7e4f51-a286-4552-8b04-68da89035e88
+		summarizeBy: sum
+		sourceColumn: Preço ¥
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Preço BRL'
+		dataType: decimal
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		lineageTag: b512ea92-4d47-49dd-bdf1-876cf71b986c
+		summarizeBy: sum
+		sourceColumn: Preço BRL
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
+
+	column 'Peso Aproximado'
+		dataType: string
+		lineageTag: fb1fb03c-c86d-42e2-96f1-235720df62ac
+		summarizeBy: none
+		sourceColumn: Peso Aproximado
+
+		annotation SummarizationSetBy = Automatic
+
+	column Links
+		dataType: string
+		lineageTag: 6e939198-7d2a-44b0-bc60-5d12deb03453
+		summarizeBy: none
+		sourceColumn: Links
+
+		annotation SummarizationSetBy = Automatic
+
+	partition WishlistCssBuy = m
+		mode: import
+		source =
+				let
+				    Fonte = GoogleSheets.Contents("https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing"),
+				    WishlistCssBuy_Table = Fonte{[name="WishlistCssBuy",ItemKind="Table"]}[Data],
+				    #"Cabeçalhos Promovidos" = Table.PromoteHeaders(WishlistCssBuy_Table, [PromoteAllScalars=true]),
+				    #"Tipo Alterado" = Table.TransformColumnTypes(#"Cabeçalhos Promovidos",{{"Item", type text}, {"Categoria", type text}, {"Preço ¥", Currency.Type}, {"Preço BRL", Currency.Type}, {"Peso Aproximado", type text}, {"Links", type text}})
+				in
+				    #"Tipo Alterado"
+
+	annotation PBI_NavigationStepName = Navegação
+
+	annotation PBI_ResultType = Table
+

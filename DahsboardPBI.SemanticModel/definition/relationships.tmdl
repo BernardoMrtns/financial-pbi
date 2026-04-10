@@ -1,0 +1,64 @@
+relationship 41ae07d4-3da0-42c7-b37c-cdb5ca308a26
+	joinOnDateBehavior: datePartOnly
+	fromColumn: FluxoCaixaCompleto.DataOriginal
+	toColumn: LocalDateTable_e03502aa-f7f1-4afb-8358-472d37202c8a.Date
+
+relationship 7b8bb491-3307-6124-c307-747e5fa86033
+	toCardinality: many
+	fromColumn: FluxoCaixaCompleto.Conta_Cartao
+	toColumn: Limites.Cartao
+
+relationship 2bfcf530-ce1b-7ebe-ff45-ed51285ac33d
+	fromColumn: FluxoCaixaCompleto.Categoria
+	toColumn: LimitesCategorias.Categoria
+
+relationship 92386d8a-39d2-4bc5-b092-7307a1cdc3c5
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Investimentos.Data
+	toColumn: LocalDateTable_78193e95-7ae4-4d35-ad2b-29c1f14ae9c1.Date
+
+relationship 35654c42-36d7-2b9e-7166-241c6c56943d
+	fromColumn: InvestimentoCDI.Data
+	toColumn: dCalendario.Date
+
+relationship 427a33c8-1337-c719-f538-a2607eaa1d60
+	fromColumn: FluxoCaixaCompleto.DataCompetencia
+	toColumn: dCalendario.Date
+
+relationship d8d2f88c-1ddf-adcf-a1bf-d439ab40bba2
+	fromColumn: Receitas.Data
+	toColumn: dCalendario.Date
+
+relationship 06a3bf35-9c3e-4b87-8e17-d24836302ead
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dCalendario.AnoMês
+	toColumn: LocalDateTable_3beb0620-397f-4c2c-92c9-89869436526d.Date
+
+relationship 8c15aa62-3521-4750-965b-c85ad052a084
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dCalendario.DateTime
+	toColumn: LocalDateTable_093431a2-138a-4402-aade-5a361771b112.Date
+
+relationship AutoDetected_7d91371b-b424-40d0-af38-cde4169092d1
+	fromColumn: Wishlist.Categoria
+	toColumn: LimitesCategorias.Categoria
+
+relationship AutoDetected_0682544a-4e19-4e30-a140-65aa289a731d
+	fromColumn: WishlistCssBuy.Categoria
+	toColumn: LimitesCategorias.Categoria
+
+relationship 29e8c926-73fa-482e-aeb8-e2bc85240ff7
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dCalendario.Date
+	toColumn: LocalDateTable_29b01095-8ae8-4824-8c6c-e16377eb353e.Date
+
+relationship 937b2997-3448-4a3d-896f-962900f314f5
+	joinOnDateBehavior: datePartOnly
+	fromColumn: InvestimentoBTC.DataHora
+	toColumn: LocalDateTable_ab0c4a76-84a9-4782-96b0-51638d2d3b6f.Date
+
+relationship c12cecb9-9a66-4860-922d-e3c5853b41af
+	joinOnDateBehavior: datePartOnly
+	fromColumn: InvestimentoCripto.DataHora
+	toColumn: LocalDateTable_5f0022ef-a5b6-4ca6-941c-3e2a08c8be47.Date
+
