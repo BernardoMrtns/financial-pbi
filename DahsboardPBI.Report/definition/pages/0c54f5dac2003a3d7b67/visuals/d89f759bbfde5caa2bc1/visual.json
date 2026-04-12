@@ -2,10 +2,10 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
   "name": "d89f759bbfde5caa2bc1",
   "position": {
-    "x": 640.20151133501258,
-    "y": 0,
+    "x": 0,
+    "y": 467.0025188916876,
     "z": 3000,
-    "height": 360,
+    "height": 252.99748110831231,
     "width": 640.20151133501258,
     "tabOrder": 3000
   },
@@ -368,6 +368,76 @@
         },
         "type": "RelativeDate",
         "howCreated": "User"
+      },
+      {
+        "name": "93f5f21c002374388071",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "InvestimentoBTC"
+              }
+            },
+            "Property": "DataHora"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "d0faf42e738b8642eb8b",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "SaldoBTC (Qtd)"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "08cfd0daede418ac2096",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "Satoshis"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "b15e0d29c8ee693a5ca6",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioBTC_TimeSeries"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "2eaaa6af49a3e0c40905",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "CotaçãoBTC"
+          }
+        },
+        "type": "Advanced"
       }
     ]
   }

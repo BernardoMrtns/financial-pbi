@@ -51,8 +51,8 @@ def main():
         print("  ✓ Nova linha adicionada em InvestimentoBTC")
 
     if not patrimonio['cdi'].empty:
-        salvar_aba(spreadsheet, "InvestimentoCDI", patrimonio['cdi'])
-        print("  ✓ InvestimentoCDI salvo")
+        adicionar_linha_aba(spreadsheet, "InvestimentoCDI", patrimonio['cdi'])
+        print("  ✓ Nova linha adicionada em InvestimentoCDI")
 
     if not patrimonio['cripto'].empty:
         adicionar_linha_aba(spreadsheet, "InvestimentoCripto", patrimonio['cripto'])

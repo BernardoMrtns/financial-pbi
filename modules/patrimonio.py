@@ -71,7 +71,7 @@ class PatrimonioCalculator:
 
     def _calcular_cdi(self):
         """
-        Calcula evolução do CDI usando a série diária do Bacen com precisão temporal.
+        Calcula o snapshot atual do CDI usando a série diária do Bacen com precisão temporal.
         """
         tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
         df_movimentos_cdi = self.df_inv[tipo_normalizado.eq("CDI")].copy()
@@ -92,7 +92,6 @@ class PatrimonioCalculator:
 
         saldo_atual = 0.0
         timestamp_anterior = None
-        linhas = []
 
         for _, row in df_movimentos_cdi.iterrows():
             timestamp_atual = row["DataHora"]
@@ -106,25 +105,22 @@ class PatrimonioCalculator:
                 saldo_atual *= fator_intervalo
 
             saldo_atual += row["ValorLiquido"]
-            linhas.append({
-                "Data": timestamp_atual,
-                "ValorCDI": saldo_atual,
-            })
             timestamp_anterior = timestamp_atual
 
-        if timestamp_anterior is not None:
-            agora = pd.Timestamp.now()
-            saldo_corrente = saldo_atual * calcular_fator_cdi_periodo(
-                timestamp_anterior,
-                agora,
-                df_historico_cdi
-            )
-            linhas.append({
-                "Data": agora,
-                "ValorCDI": saldo_corrente,
-            })
+        if timestamp_anterior is None:
+            return pd.DataFrame()
 
-        return pd.DataFrame(linhas)
+        agora = pd.Timestamp.now()
+        saldo_corrente = saldo_atual * calcular_fator_cdi_periodo(
+            timestamp_anterior,
+            agora,
+            df_historico_cdi
+        )
+
+        return pd.DataFrame([{
+            "DataHora": agora,
+            "ValorCDI": saldo_corrente,
+        }])
 
     def _resolver_ativo_cripto(self, ticker):
         """

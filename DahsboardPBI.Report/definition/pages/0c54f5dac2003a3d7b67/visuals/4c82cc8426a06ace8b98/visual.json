@@ -3,9 +3,9 @@
   "name": "4c82cc8426a06ace8b98",
   "position": {
     "x": 0,
-    "y": 360,
+    "y": 104.28211586901763,
     "z": 1000,
-    "height": 360,
+    "height": 362.72040302267,
     "width": 640.20151133501258,
     "tabOrder": 1000
   },
@@ -239,5 +239,51 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "ccf2a28cd444d553084c",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioBTCAtual"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "73339b197b103d97571a",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "SaldoCDI"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "6221df3eeec023a52c21",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioCriptosAtual"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

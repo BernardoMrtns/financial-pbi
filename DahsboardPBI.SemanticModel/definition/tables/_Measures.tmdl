@@ -48,7 +48,7 @@ table _Measures
 			    SUM(InvestimentoBTC[ValorReais]),
 			    InvestimentoBTC[DataHora] = MAX(InvestimentoBTC[DataHora])
 			)
-		formatString: "R$"\ #,0;-"R$"\ #,0;"R$"\ #,0
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
 		lineageTag: bd4ca602-57d4-43c3-9bac-f16aebf721fb
 
 		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
@@ -350,7 +350,7 @@ table _Measures
 			    SUM(InvestimentoCripto[ValorReais]),
 			    InvestimentoCripto[DataHora] = MAX(InvestimentoCripto[DataHora])
 			)
-		formatString: "R$"\ #,0.###############;-"R$"\ #,0.###############;"R$"\ #,0.###############
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
 		lineageTag: 710eac4d-77e3-4006-af9b-ca385a6d9c7e
 
 		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
@@ -358,6 +358,14 @@ table _Measures
 	measure PatrimônioCriptosTotal = [PatrimonioBTCAtual] + [PatrimonioCriptosAtual]
 		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
 		lineageTag: 151d5820-d46f-48ad-9548-9097ee3348aa
+
+		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
+
+	measure PatrimonioCDI_TimeSeries =
+			
+			SUM(InvestimentoCDI[ValorCDI])
+		formatString: "R$"\ #,0.00;-"R$"\ #,0.00;"R$"\ #,0.00
+		lineageTag: 8319f2ee-3268-4165-a90e-78f8a67e2ba9
 
 		annotation PBI_FormatHint = {"currencyCulture":"pt-BR"}
 

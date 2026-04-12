@@ -10,7 +10,7 @@
     "tabOrder": 2000
   },
   "visual": {
-    "visualType": "areaChart",
+    "visualType": "lineChart",
     "query": {
       "queryState": {
         "Category": {
@@ -20,14 +20,14 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "dCalendario"
+                      "Entity": "InvestimentoCDI"
                     }
                   },
-                  "Property": "Date"
+                  "Property": "Data"
                 }
               },
-              "queryRef": "dCalendario.Date",
-              "nativeQueryRef": "Date",
+              "queryRef": "InvestimentoCDI.Data",
+              "nativeQueryRef": "Data",
               "active": true
             }
           ]
@@ -36,23 +36,17 @@
           "projections": [
             {
               "field": {
-                "Aggregation": {
+                "Measure": {
                   "Expression": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Entity": "InvestimentoCDI"
-                        }
-                      },
-                      "Property": "ValorCDI"
+                    "SourceRef": {
+                      "Entity": "_Measures"
                     }
                   },
-                  "Function": 0
+                  "Property": "PatrimonioCDI_TimeSeries"
                 }
               },
-              "queryRef": "CountNonNull(InvestimentoCDI.ValorCDI)",
-              "nativeQueryRef": "Valor Investido",
-              "displayName": "Valor Investido"
+              "queryRef": "_Measures.PatrimonioCDI_TimeSeries",
+              "nativeQueryRef": "PatrimonioCDI_TimeSeries"
             }
           ]
         }
@@ -64,10 +58,10 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "dCalendario"
+                    "Entity": "InvestimentoCDI"
                   }
                 },
-                "Property": "Date"
+                "Property": "Data"
               }
             },
             "direction": "Ascending"
@@ -247,18 +241,6 @@
                   "Value": "false"
                 }
               }
-            },
-            "end": {
-              "expr": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "_Measures"
-                    }
-                  },
-                  "Property": "ValorCDI_ComFolga"
-                }
-              }
             }
           }
         }
@@ -341,7 +323,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 1,
                       "Percent": 0
                     }
                   }
@@ -353,7 +335,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 1,
                       "Percent": 0
                     }
                   }
@@ -375,7 +357,7 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
             }
@@ -384,5 +366,67 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "e4bdc717049a5dc0ab1b",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "dCalendario"
+              }
+            },
+            "Property": "DateTime"
+          }
+        },
+        "type": "Categorical",
+        "howCreated": "User",
+        "objects": {
+          "general": [
+            {
+              "properties": {
+                "isInvertedSelectionMode": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "true"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "15895f198abd28d00e3d",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "InvestimentoCDI"
+              }
+            },
+            "Property": "Data"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "f848bd00a4861ddd5a75",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioCDI_TimeSeries"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }
