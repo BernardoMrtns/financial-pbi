@@ -88,6 +88,22 @@
         {
           "properties": {}
         }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "145.91185410334347D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Wishlist.Nome"
+          }
+        }
       ]
     },
     "visualContainerObjects": {
