@@ -1552,7 +1552,7 @@
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "_Measures",
-                    "ConceptualProperty": "CorDoSaldo"
+                    "ConceptualProperty": "CorPatrimonio"
                   }
                 },
                 "State": "Generated",
@@ -12786,16 +12786,16 @@
             "lineageTag": "35d51c0a-a118-4baa-90fe-6929cb037ed3"
           },
           {
-            "name": "CorDoSaldo",
+            "name": "CorPatrimonio",
             "expression": [
               "",
               "SWITCH(",
               "    TRUE(),",
-              "    [SaldodoMês] >= 500, \"#4472C4\",    -- azul, (antes eu usava verde, mas misturado com os vermelhos na barra deu ruim)",
-              "    [SaldodoMês] > 0,    \"#E6B300\",    -- amarelo (sobrou pouco)",
-              "    \"#C00000\"                            -- vermelho (zerado ou negativo)",
-              ")",
-              ""
+              "    [PatrimonioReal] <= 4800, \"#C00000\",",
+              "    [PatrimonioReal] <= 14444, \"#E6B300\",",
+              "    [PatrimonioReal] < 28800, \"#808080\",",
+              "    \"#4472C4\"",
+              ")"
             ],
             "lineageTag": "fd5718f2-27ca-4952-bb1e-ffbc9d5dbd28"
           },
@@ -13142,6 +13142,20 @@
             ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "8319f2ee-3268-4165-a90e-78f8a67e2ba9"
+          },
+          {
+            "name": "CorSaldoMes",
+            "expression": [
+              "",
+              "SWITCH(",
+              "    TRUE(),",
+              "    [SaldodoMês] < 0, \"#C00000\",          -- prejuízo",
+              "    [SaldodoMês] < 500, \"#E6B300\",        -- quase nada",
+              "    [SaldodoMês] < 1000, \"#70AD47\",       -- ok",
+              "    \"#4472C4\"                             -- forte",
+              ")"
+            ],
+            "lineageTag": "6d716c5f-ea1e-4d96-a141-2af2611a8886"
           }
         ],
         "partitions": [

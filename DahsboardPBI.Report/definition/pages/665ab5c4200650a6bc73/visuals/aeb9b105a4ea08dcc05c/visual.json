@@ -73,7 +73,7 @@
                           "Entity": "_Measures"
                         }
                       },
-                      "Property": "CorDoSaldo"
+                      "Property": "CorSaldoMes"
                     }
                   }
                 }
@@ -95,7 +95,7 @@
                           "Entity": "_Measures"
                         }
                       },
-                      "Property": "CorDoSaldo"
+                      "Property": "CorSaldoMes"
                     }
                   }
                 }

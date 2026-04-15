@@ -162,7 +162,7 @@
                           "Entity": "_Measures"
                         }
                       },
-                      "Property": "CorDoSaldo"
+                      "Property": "CorPatrimonio"
                     }
                   }
                 }
@@ -215,7 +215,7 @@
                           "Entity": "_Measures"
                         }
                       },
-                      "Property": "CorDoSaldo"
+                      "Property": "CorPatrimonio"
                     }
                   }
                 }
@@ -304,5 +304,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "eca219dd406516442a05",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioReal"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }
