@@ -95,11 +95,10 @@ def adicionar_linha_aba(spreadsheet, nome_aba, df_nova_linha):
     """
     try:
         worksheet = spreadsheet.worksheet(nome_aba)
-    except:
+    except Exception:
         # Se a aba não existe, cria com cabeçalho
         worksheet = spreadsheet.add_worksheet(title=nome_aba, rows=1000, cols=20)
-        # Adiciona cabeçalho
-        worksheet.append_row(df_nova_linha.columns.tolist())
+        worksheet.update("A1", [df_nova_linha.columns.tolist()])
     
     df_copy = df_nova_linha.copy()
     
@@ -111,7 +110,36 @@ def adicionar_linha_aba(spreadsheet, nome_aba, df_nova_linha):
         df_copy[col] = df_copy[col].replace('nan', '')
     
     df_copy = df_copy.fillna('')
+
+    # Garante que a ordem das colunas bate com o cabeçalho da aba.
+    header_sheet = worksheet.row_values(1)
+    header_df = df_copy.columns.tolist()
+    if not header_sheet:
+        worksheet.update("A1", [header_df])
+        header_sheet = header_df
+    elif header_sheet != header_df:
+        # Migração compatível para CDI: cabeçalho legado "Data" -> "DataHora".
+        if (
+            nome_aba == "InvestimentoCDI"
+            and header_sheet == ["Data", "ValorCDI"]
+            and header_df == ["DataHora", "ValorCDI"]
+        ):
+            worksheet.update("A1", [["DataHora", "ValorCDI"]])
+            header_sheet = ["DataHora", "ValorCDI"]
+        else:
+            raise ValueError(
+                f"Cabeçalho incompatível em '{nome_aba}'. Esperado={header_sheet} Recebido={header_df}"
+            )
     
     # Adiciona cada linha do DataFrame
     for _, row in df_copy.iterrows():
-        worksheet.append_row(row.tolist())
+        valores = [str(v) if isinstance(v, pd.Timestamp) else v for v in row.tolist()]
+        linhas_existentes = len(worksheet.get_all_values())
+        proxima_linha = max(2, linhas_existentes + 1)
+
+        if proxima_linha > worksheet.row_count:
+            worksheet.add_rows(proxima_linha - worksheet.row_count + 100)
+
+        ultima_coluna = chr(ord('A') + len(header_sheet) - 1)
+        intervalo = f"A{proxima_linha}:{ultima_coluna}{proxima_linha}"
+        worksheet.update(intervalo, [valores])

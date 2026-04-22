@@ -117,10 +117,11 @@ class PatrimonioCalculator:
             df_historico_cdi
         )
 
-        return pd.DataFrame([{
+        snapshot_cdi = pd.DataFrame([{
             "DataHora": agora,
             "ValorCDI": saldo_corrente,
         }])
+        return snapshot_cdi[["DataHora", "ValorCDI"]]
 
     def _resolver_ativo_cripto(self, ticker):
         """

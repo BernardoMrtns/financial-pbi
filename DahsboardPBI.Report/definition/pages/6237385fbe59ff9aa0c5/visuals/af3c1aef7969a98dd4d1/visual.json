@@ -110,13 +110,12 @@
                     "Entity": "_Measures"
                   }
                 },
-                "Property": "LimiteUsado"
+                "Property": "LimiteDisponível"
               }
             },
             "direction": "Descending"
           }
-        ],
-        "isDefaultSort": true
+        ]
       }
     },
     "objects": {

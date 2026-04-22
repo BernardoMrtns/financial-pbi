@@ -23,11 +23,11 @@
                       "Entity": "InvestimentoCDI"
                     }
                   },
-                  "Property": "Data"
+                  "Property": "DataHora"
                 }
               },
-              "queryRef": "InvestimentoCDI.Data",
-              "nativeQueryRef": "Data",
+              "queryRef": "InvestimentoCDI.DataHora",
+              "nativeQueryRef": "DataHora",
               "active": true
             }
           ]
@@ -61,7 +61,7 @@
                     "Entity": "InvestimentoCDI"
                   }
                 },
-                "Property": "Data"
+                "Property": "DataHora"
               }
             },
             "direction": "Ascending"
@@ -408,24 +408,10 @@
                 "Entity": "InvestimentoCDI"
               }
             },
-            "Property": "Data"
+            "Property": "DataHora"
           }
         },
         "type": "Categorical"
-      },
-      {
-        "name": "f848bd00a4861ddd5a75",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "_Measures"
-              }
-            },
-            "Property": "PatrimonioCDI_TimeSeries"
-          }
-        },
-        "type": "Advanced"
       }
     ]
   }

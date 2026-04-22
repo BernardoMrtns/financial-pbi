@@ -12068,8 +12068,9 @@
       },
       {
         "name": "35654c42-36d7-2b9e-7166-241c6c56943d",
-        "fromColumn": "Data",
+        "fromColumn": "DataHora",
         "fromTable": "InvestimentoCDI",
+        "joinOnDateBehavior": "datePartOnly",
         "toColumn": "Date",
         "toTable": "dCalendario"
       },
@@ -12591,11 +12592,11 @@
             "expression": [
               "",
               "VAR UltimaData =",
-              "    MAX(InvestimentoCDI[Data])",
+              "    MAX(InvestimentoCDI[DataHora])",
               "RETURN",
               "CALCULATE(",
               "    SUM(InvestimentoCDI[ValorCDI]),",
-              "    InvestimentoCDI[Data] = UltimaData",
+              "    InvestimentoCDI[DataHora] = UltimaData",
               ")"
             ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
@@ -13190,17 +13191,21 @@
         ],
         "columns": [
           {
-            "name": "Data",
+            "name": "DataHora",
             "annotations": [
               {
                 "name": "SummarizationSetBy",
                 "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isDateTimeCustom\":true}"
               }
             ],
             "dataType": "dateTime",
-            "formatString": "General Date",
+            "formatString": "dd/mm/yyyy hh:nn:ss",
             "lineageTag": "99bdc7cf-f117-4838-8f3f-1f390f999973",
-            "sourceColumn": "Data",
+            "sourceColumn": "DataHora",
             "summarizeBy": "none"
           },
           {
@@ -13233,7 +13238,7 @@
                 "    Source = GoogleSheets.Contents(\"https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing\"),",
                 "    InvestimentoCDI_Table = Source{[name=\"InvestimentoCDI\",ItemKind=\"Table\"]}[Data],",
                 "    #\"Promoted Headers\" = Table.PromoteHeaders(InvestimentoCDI_Table, [PromoteAllScalars=true]),",
-                "    #\"Changed Type\" = Table.TransformColumnTypes(#\"Promoted Headers\",{{\"Data\", type datetime}, {\"ValorCDI\", type number}})",
+                "    #\"Changed Type\" = Table.TransformColumnTypes(#\"Promoted Headers\",{{\"DataHora\", type datetime}, {\"ValorCDI\", type number}})",
                 "in",
                 "    #\"Changed Type\""
               ],
