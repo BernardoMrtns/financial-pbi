@@ -3,3 +3,7 @@ venv/
 __pycache__/
 credentials.json
 config.py
+DahsboardPBI.Report/.pbi/localSettings.json
+DahsboardPBI.Report/definition/pages/pages.json
+DahsboardPBI.SemanticModel/.pbi/cache.abf
+DahsboardPBI.SemanticModel/.pbi/localSettings.json
