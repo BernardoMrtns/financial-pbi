@@ -1,23 +1,50 @@
-# Sistema de Controle Financeiro
+# financial-pbi
 
-Sistema modular para gerenciamento de finanças pessoais integrado com Google Sheets.
+Pipeline de finanças pessoais com integração ao Google Sheets para:
 
-## Estrutura do Projeto
+- consolidar fluxo de caixa,
+- processar receitas e despesas parceladas,
+- calcular snapshots de patrimônio (CDI, BTC e outras criptos).
 
+## Visão Rápida
+
+![Python](https://img.shields.io/badge/Python-3.14+-blue)
+![Pytest](https://img.shields.io/badge/tests-pytest-green)
+![Status](https://img.shields.io/badge/status-active-success)
+
+## Principais Funcionalidades
+
+- Carga e normalização de múltiplas abas do Google Sheets.
+- Processamento de fluxo de caixa consolidado com status (`Pago`, `Pendente`, etc.).
+- Cálculo de patrimônio com:
+    - CDI com série histórica Bacen,
+    - BTC com conversão correta de satoshis,
+    - Criptos por ticker usando CoinGecko.
+- Escrita robusta no Sheets com:
+    - estratégia de swap para snapshots,
+    - append em lote para histórico incremental.
+- Logging estruturado e retry com backoff exponencial.
+- Testes automatizados com `pytest`.
+
+## Arquitetura
+
+```text
+financial-pbi/
+├── main.py
+├── config.py
+├── services/      # Integrações externas (Google Sheets)
+├── processors/    # Regras de negócio
+├── models/        # Dataclasses e contratos de dados
+├── utils/         # Logging, retry, parsing e helpers
+├── tests/         # Testes automatizados
+└── modules/       # Compatibilidade com imports legados
 ```
-projeto_financas/
-├── main.py                      # Script principal
-├── config.py                    # Configurações centralizadas
-├── requirements.txt             # Dependências do projeto
-├── credentials.json             # Credenciais Google (não commitado)
-└── modules/
-    ├── __init__.py             # Inicializador do módulo
-    ├── google_sheets.py        # Integração com Google Sheets
-    ├── data_loader.py          # Carregamento de dados
-    ├── data_processor.py       # Processamento de fluxo de caixa
-    ├── patrimonio.py           # Cálculo de patrimônio
-    └── utils.py                # Funções utilitárias
-```
+
+## Requisitos
+
+- Python 3.14+
+- Acesso ao Google Sheets API com conta de serviço
+- Arquivo `credentials.json` na raiz do projeto
 
 ## Instalação
 
@@ -27,65 +54,80 @@ pip install -r requirements.txt
 
 ## Configuração
 
-1. Coloque seu arquivo `credentials.json` na raiz do projeto
-2. Edite `config.py` com seu `SPREADSHEET_ID`
-3. Ajuste `DIA_FECHAMENTO_CARTAO` se necessário
+Ajuste os parâmetros em `config.py`:
 
-## Uso
+- `SPREADSHEET_ID`
+- `MAX_RETRIES`, `RETRY_BASE_DELAY_SECONDS`, `REQUEST_TIMEOUT_SECONDS`
+- `LOG_LEVEL`, `LOG_FILE`
 
-Execute o script principal:
+Importante:
+
+- `SATOSHIS_PER_BITCOIN` está definido como `100_000_000` (valor correto).
+
+## Execução
 
 ```bash
 python main.py
 ```
 
-## Módulos
+## Testes
 
-### config.py
-Configurações centralizadas do sistema (credenciais, IDs, schemas).
+```bash
+pytest -q
+```
 
-### modules/google_sheets.py
-- `conectar_google_sheets()`: Conecta ao Google Sheets
-- `carregar_aba()`: Carrega uma aba como DataFrame
-- `salvar_aba()`: Salva DataFrame em uma aba
+## Contrato de Abas (Google Sheets)
 
-### modules/utils.py
-- `converter_data_flexivel()`: Converte datas em múltiplos formatos
-- `calcular_mes_competencia()`: Calcula mês de competência do cartão
-- `obter_cdi_historico()`: Busca histórico de CDI
+### Entradas esperadas
 
-### modules/data_loader.py
-Classe `DataLoader`: Carrega e normaliza todas as abas do Google Sheets.
+| Aba | Finalidade |
+| --- | --- |
+| `FaturasPagas` | Último ciclo pago por cartão |
+| `ComprasCartao` | Compras e parcelamentos no cartão |
+| `PixParcelado` | Parcelamentos com entrada e parcelas |
+| `Assinaturas` | Custos recorrentes |
+| `DebitoAvulso` | Saídas à vista |
+| `Receitas` | Entradas de caixa |
+| `Investimentos` | Movimentações de CDI/BTC/cripto |
 
-### modules/data_processor.py
-Classe `FluxoCaixaProcessor`: Processa movimentações:
-- Cartões de crédito (parcelado)
-- PIX parcelado
-- Assinaturas recorrentes
-- Débitos e receitas
-- Investimentos
+### Saídas geradas
 
-### modules/patrimonio.py
-Classe `PatrimonioCalculator`: Calcula evolução de patrimônio:
-- CDI (corrigido com precisão temporal e taxa diária do Bacen)
-- Bitcoin (com lógica exclusiva)
-- Criptomoedas genéricas por ticker (ex.: SOL, XRP, ETH)
+| Aba | Conteúdo |
+| --- | --- |
+| `FluxoCaixaCompleto` | Movimentações consolidadas |
+| `InvestimentoBTC` | Snapshot atual de BTC |
+| `InvestimentoCripto` | Snapshot atual de criptos |
+| `InvestimentoCDI` | Snapshot atual de CDI (`DataHora`) |
 
-## Abas do Google Sheets
+## O Que Mudou no Preenchimento da Planilha
 
-**Entrada:**
-- FaturasPagas
-- ComprasCartao
-- PixParcelado
-- Assinaturas
-- DebitoAvulso
-- Receitas
-- Investimentos
+- Fluxo de preenchimento manual continua praticamente o mesmo.
+- Datas inválidas do tipo somente horário (ex.: `16:24:00`) agora são tratadas como vazias.
+- `InvestimentoCDI` usa cabeçalho `DataHora` para preservar precisão temporal.
+- Escrita incremental de investimentos é feita em lote (mais estável/performance).
 
-**Saída:**
-- FluxoCaixaCompleto
-- InvestimentoBTC
-- InvestimentoCripto
-- InvestimentoCDI
+## Observabilidade e Robustez
 
-`InvestimentoCDI` registra a evolução com timestamp completo para preservar a leitura horária do rendimento.
+- Logs em console + arquivo (`logs/financial-pbi.log`).
+- Retry padrão para chamadas externas com backoff exponencial.
+- Tratamento de exceções específicas do `gspread` e requests.
+
+## Módulos Principais
+
+- `services/google_sheets.py`: leitura/escrita no Sheets.
+- `processors/data_loader.py`: carga e normalização das abas.
+- `processors/fluxo_caixa.py`: consolidação de entradas/saídas.
+- `processors/patrimonio.py`: cálculo de snapshots de investimento.
+- `utils/data_utils.py`: parsing de datas/números e cálculo de CDI.
+- `utils/logging_config.py`: configuração de logging sem handlers duplicados.
+- `utils/retry.py`: retry genérico com backoff.
+
+## Troubleshooting
+
+- Erro de credenciais: verifique `credentials.json` e permissões da conta de serviço.
+- Erro de planilha: confirme `SPREADSHEET_ID` em `config.py`.
+- Inconsistência de colunas: valide os cabeçalhos das abas de entrada.
+
+## Licença
+
+Uso pessoal.
