@@ -4,7 +4,7 @@
   "artifacts": [
     {
       "report": {
-        "path": "DahsboardPBI.Report"
+        "path": "financial.Report"
       }
     }
   ],

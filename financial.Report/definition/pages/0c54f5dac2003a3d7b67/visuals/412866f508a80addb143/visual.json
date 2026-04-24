@@ -38,10 +38,10 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "PatrimônioCriptosTotal"
+                  "Property": "PatrimonioCriptosAtual"
                 }
               },
-              "queryRef": "_Measures.PatrimônioCriptosTotal",
+              "queryRef": "_Measures.PatrimonioCriptosAtual",
               "nativeQueryRef": "Criptos",
               "displayName": "Criptos"
             },
@@ -121,7 +121,7 @@
             "target": {
               "expr": {
                 "Literal": {
-                  "Value": "50000D"
+                  "Value": "30000D"
                 }
               }
             }
@@ -346,20 +346,6 @@
         "type": "Advanced"
       },
       {
-        "name": "856733b293893c8071b6",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "_Measures"
-              }
-            },
-            "Property": "PatrimônioCriptosTotal"
-          }
-        },
-        "type": "Advanced"
-      },
-      {
         "name": "4fcae3510e266cb71045",
         "field": {
           "Measure": {
@@ -383,6 +369,20 @@
               }
             },
             "Property": "PatrimonioBTCAtual"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "6e822a91b4989bae5781",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "PatrimonioCriptosAtual"
           }
         },
         "type": "Advanced"

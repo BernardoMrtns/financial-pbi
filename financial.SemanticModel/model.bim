@@ -1548,7 +1548,7 @@
                   }
                 ]
               },
-              "entity__measure.cor_do_saldo": {
+              "entity__measure.cor_patrimonio": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "_Measures",
@@ -1558,12 +1558,35 @@
                 "State": "Generated",
                 "Terms": [
                   {
-                    "cor do saldo": {
+                    "cor patrimonio": {
                       "State": "Generated"
                     }
                   },
                   {
-                    "CorDoSaldo": {
+                    "CorPatrimonio": {
+                      "State": "Generated",
+                      "Type": "Noun",
+                      "Weight": 0.99
+                    }
+                  }
+                ]
+              },
+              "entity__measure.cor_saldo_mes": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "_Measures",
+                    "ConceptualProperty": "CorSaldoMes"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "cor saldo mes": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "CorSaldoMes": {
                       "State": "Generated",
                       "Type": "Noun",
                       "Weight": 0.99
@@ -2139,59 +2162,6 @@
                   }
                 ]
               },
-              "entity__measure.patrimônio_criptos_total": {
-                "Definition": {
-                  "Binding": {
-                    "ConceptualEntity": "_Measures",
-                    "ConceptualProperty": "PatrimônioCriptosTotal"
-                  }
-                },
-                "State": "Generated",
-                "Terms": [
-                  {
-                    "patrimônio criptos total": {
-                      "State": "Generated"
-                    }
-                  },
-                  {
-                    "PatrimônioCriptosTotal": {
-                      "State": "Generated",
-                      "Type": "Noun",
-                      "Weight": 0.99
-                    }
-                  },
-                  {
-                    "patrimônio cripto aggregate": {
-                      "Source": {
-                        "Agent": "Thesaurus"
-                      },
-                      "State": "Suggested",
-                      "Type": "Noun",
-                      "Weight": 0.739
-                    }
-                  },
-                  {
-                    "patrimônio cripto overall": {
-                      "Source": {
-                        "Agent": "Thesaurus"
-                      },
-                      "State": "Suggested",
-                      "Type": "Noun",
-                      "Weight": 0.739
-                    }
-                  },
-                  {
-                    "Criptos": {
-                      "Source": {
-                        "Agent": "PowerBI.VisualColumnRename",
-                        "Type": "External"
-                      },
-                      "State": "Suggested",
-                      "Weight": 0.9
-                    }
-                  }
-                ]
-              },
               "entity__measure.patrimônio_total": {
                 "Definition": {
                   "Binding": {
@@ -2326,7 +2296,7 @@
                   }
                 ]
               },
-              "entity__measure.saldodo_mês": {
+              "entity__measure.saldo_mes": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "_Measures",
@@ -2336,12 +2306,12 @@
                 "State": "Generated",
                 "Terms": [
                   {
-                    "saldodo mês": {
+                    "saldo mes": {
                       "State": "Generated"
                     }
                   },
                   {
-                    "SaldodoMês": {
+                    "SaldoMes": {
                       "State": "Generated",
                       "Type": "Noun",
                       "Weight": 0.99
@@ -5248,19 +5218,26 @@
                   }
                 ]
               },
-              "investimento_CDI.data": {
+              "investimento_CDI.data_hora": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "InvestimentoCDI",
-                    "ConceptualProperty": "Data"
+                    "ConceptualProperty": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data": {
+                    "data hora": {
                       "State": "Generated"
+                    }
+                  },
+                  {
+                    "DataHora": {
+                      "State": "Generated",
+                      "Type": "Noun",
+                      "Weight": 0.99
                     }
                   },
                   {
@@ -5270,73 +5247,73 @@
                     }
                   },
                   {
-                    "information": {
+                    "information hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.736
+                      "Weight": 0.6
                     }
                   },
                   {
-                    "fact": {
+                    "fact hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.736
+                      "Weight": 0.6
                     }
                   },
                   {
-                    "info": {
+                    "info hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.736
+                      "Weight": 0.6
                     }
                   },
                   {
-                    "statistic": {
+                    "statistic hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.736
+                      "Weight": 0.6
                     }
                   },
                   {
-                    "document": {
+                    "document hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.714
+                      "Weight": 0.582
                     }
                   },
                   {
-                    "figure": {
+                    "figure hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.714
+                      "Weight": 0.582
                     }
                   },
                   {
-                    "record": {
+                    "record hora": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.714
+                      "Weight": 0.582
                     }
                   }
                 ]
@@ -8169,7 +8146,7 @@
                 },
                 "State": "Generated"
               },
-              "fluxo_caixa_completo_has_entity__measure_cor_do_saldo": {
+              "fluxo_caixa_completo_has_entity__measure_cor_patrimonio": {
                 "Binding": {
                   "ConceptualEntity": "FluxoCaixaCompleto"
                 },
@@ -8177,21 +8154,54 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "entity__measure.cor_do_saldo"
+                        "Role": "entity__measure.cor_patrimonio"
                       },
                       "Subject": {
                         "Role": "fluxo_caixa_completo"
                       }
                     },
-                    "ID": "fluxo_caixa_completos_have_cor_do_saldo",
+                    "ID": "fluxo_caixa_completos_have_cor_patrimonio",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "entity__measure.cor_do_saldo": {
+                  "entity__measure.cor_patrimonio": {
                     "Target": {
-                      "Entity": "entity__measure.cor_do_saldo"
+                      "Entity": "entity__measure.cor_patrimonio"
+                    }
+                  },
+                  "fluxo_caixa_completo": {
+                    "Target": {
+                      "Entity": "fluxo_caixa_completo"
+                    }
+                  }
+                },
+                "State": "Generated"
+              },
+              "fluxo_caixa_completo_has_entity__measure_cor_saldo_mes": {
+                "Binding": {
+                  "ConceptualEntity": "FluxoCaixaCompleto"
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Object": {
+                        "Role": "entity__measure.cor_saldo_mes"
+                      },
+                      "Subject": {
+                        "Role": "fluxo_caixa_completo"
+                      }
+                    },
+                    "ID": "fluxo_caixa_completos_have_cor_saldo_mes",
+                    "State": "Generated",
+                    "Weight": 0.99
+                  }
+                ],
+                "Roles": {
+                  "entity__measure.cor_saldo_mes": {
+                    "Target": {
+                      "Entity": "entity__measure.cor_saldo_mes"
                     }
                   },
                   "fluxo_caixa_completo": {
@@ -8433,7 +8443,7 @@
                 },
                 "State": "Generated"
               },
-              "fluxo_caixa_completo_has_entity__measure_saldodo_mês": {
+              "fluxo_caixa_completo_has_entity__measure_saldo_mes": {
                 "Binding": {
                   "ConceptualEntity": "FluxoCaixaCompleto"
                 },
@@ -8441,21 +8451,21 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "entity__measure.saldodo_mês"
+                        "Role": "entity__measure.saldo_mes"
                       },
                       "Subject": {
                         "Role": "fluxo_caixa_completo"
                       }
                     },
-                    "ID": "fluxo_caixa_completos_have_saldodo_mês",
+                    "ID": "fluxo_caixa_completos_have_saldo_mes",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "entity__measure.saldodo_mês": {
+                  "entity__measure.saldo_mes": {
                     "Target": {
-                      "Entity": "entity__measure.saldodo_mês"
+                      "Entity": "entity__measure.saldo_mes"
                     }
                   },
                   "fluxo_caixa_completo": {
@@ -8555,6 +8565,39 @@
                   "entity__measure.total_por_categoria": {
                     "Target": {
                       "Entity": "entity__measure.total_por_categoria"
+                    }
+                  },
+                  "fluxo_caixa_completo": {
+                    "Target": {
+                      "Entity": "fluxo_caixa_completo"
+                    }
+                  }
+                },
+                "State": "Generated"
+              },
+              "fluxo_caixa_completo_has_entity__measure_total_receitas": {
+                "Binding": {
+                  "ConceptualEntity": "FluxoCaixaCompleto"
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Object": {
+                        "Role": "entity__measure.total_receitas"
+                      },
+                      "Subject": {
+                        "Role": "fluxo_caixa_completo"
+                      }
+                    },
+                    "ID": "fluxo_caixa_completos_have_total_receitas",
+                    "State": "Generated",
+                    "Weight": 0.99
+                  }
+                ],
+                "Roles": {
+                  "entity__measure.total_receitas": {
+                    "Target": {
+                      "Entity": "entity__measure.total_receitas"
                     }
                   },
                   "fluxo_caixa_completo": {
@@ -9073,6 +9116,39 @@
                 },
                 "State": "Generated"
               },
+              "investimento_BTC_has_entity__measure_cor_patrimonio": {
+                "Binding": {
+                  "ConceptualEntity": "InvestimentoBTC"
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Object": {
+                        "Role": "entity__measure.cor_patrimonio"
+                      },
+                      "Subject": {
+                        "Role": "investimento_BTC"
+                      }
+                    },
+                    "ID": "investimento_BTCs_have_cor_patrimonio",
+                    "State": "Generated",
+                    "Weight": 0.99
+                  }
+                ],
+                "Roles": {
+                  "entity__measure.cor_patrimonio": {
+                    "Target": {
+                      "Entity": "entity__measure.cor_patrimonio"
+                    }
+                  },
+                  "investimento_BTC": {
+                    "Target": {
+                      "Entity": "investimento_BTC"
+                    }
+                  }
+                },
+                "State": "Generated"
+              },
               "investimento_BTC_has_entity__measure_cotação_BTC": {
                 "Binding": {
                   "ConceptualEntity": "InvestimentoBTC"
@@ -9524,13 +9600,6 @@
                 ],
                 "Roles": {
                   "d_calendario": {
-                    "Nouns": [
-                      {
-                        "data": {
-                          "State": "Generated"
-                        }
-                      }
-                    ],
                     "Target": {
                       "Entity": "d_calendario"
                     }
@@ -9543,7 +9612,7 @@
                 },
                 "State": "Generated"
               },
-              "investimento_CDI_has_data": {
+              "investimento_CDI_has_data_hora": {
                 "Binding": {
                   "ConceptualEntity": "InvestimentoCDI"
                 },
@@ -9551,13 +9620,13 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento_CDI.data"
+                        "Role": "investimento_CDI.data_hora"
                       },
                       "Subject": {
                         "Role": "investimento_CDI"
                       }
                     },
-                    "ID": "investimento_CDI_have_data",
+                    "ID": "investimento_CDI_have_data_horas",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9568,9 +9637,9 @@
                       "Entity": "investimento_CDI"
                     }
                   },
-                  "investimento_CDI.data": {
+                  "investimento_CDI.data_hora": {
                     "Target": {
-                      "Entity": "investimento_CDI.data"
+                      "Entity": "investimento_CDI.data_hora"
                     }
                   }
                 },
@@ -9599,6 +9668,39 @@
                   "entity__measure.SaldoCDIhistórico": {
                     "Target": {
                       "Entity": "entity__measure.SaldoCDIhistórico"
+                    }
+                  },
+                  "investimento_CDI": {
+                    "Target": {
+                      "Entity": "investimento_CDI"
+                    }
+                  }
+                },
+                "State": "Generated"
+              },
+              "investimento_CDI_has_entity__measure_cor_patrimonio": {
+                "Binding": {
+                  "ConceptualEntity": "InvestimentoCDI"
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Object": {
+                        "Role": "entity__measure.cor_patrimonio"
+                      },
+                      "Subject": {
+                        "Role": "investimento_CDI"
+                      }
+                    },
+                    "ID": "investimento_CDI_have_cor_patrimonio",
+                    "State": "Generated",
+                    "Weight": 0.99
+                  }
+                ],
+                "Roles": {
+                  "entity__measure.cor_patrimonio": {
+                    "Target": {
+                      "Entity": "entity__measure.cor_patrimonio"
                     }
                   },
                   "investimento_CDI": {
@@ -10060,6 +10162,39 @@
                   "investimento_cripto.data_hora": {
                     "Target": {
                       "Entity": "investimento_cripto.data_hora"
+                    }
+                  }
+                },
+                "State": "Generated"
+              },
+              "investimento_cripto_has_entity__measure_cor_patrimonio": {
+                "Binding": {
+                  "ConceptualEntity": "InvestimentoCripto"
+                },
+                "Phrasings": [
+                  {
+                    "Attribute": {
+                      "Object": {
+                        "Role": "entity__measure.cor_patrimonio"
+                      },
+                      "Subject": {
+                        "Role": "investimento_cripto"
+                      }
+                    },
+                    "ID": "investimento_criptos_have_cor_patrimonio",
+                    "State": "Generated",
+                    "Weight": 0.99
+                  }
+                ],
+                "Roles": {
+                  "entity__measure.cor_patrimonio": {
+                    "Target": {
+                      "Entity": "entity__measure.cor_patrimonio"
+                    }
+                  },
+                  "investimento_cripto": {
+                    "Target": {
+                      "Entity": "investimento_cripto"
                     }
                   }
                 },
@@ -11316,105 +11451,6 @@
                   "receita.descricao": {
                     "Target": {
                       "Entity": "receita.descricao"
-                    }
-                  }
-                },
-                "State": "Generated"
-              },
-              "receita_has_entity__measure_cor_do_saldo": {
-                "Binding": {
-                  "ConceptualEntity": "Receitas"
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Object": {
-                        "Role": "entity__measure.cor_do_saldo"
-                      },
-                      "Subject": {
-                        "Role": "receita"
-                      }
-                    },
-                    "ID": "receitas_have_cor_do_saldo",
-                    "State": "Generated",
-                    "Weight": 0.99
-                  }
-                ],
-                "Roles": {
-                  "entity__measure.cor_do_saldo": {
-                    "Target": {
-                      "Entity": "entity__measure.cor_do_saldo"
-                    }
-                  },
-                  "receita": {
-                    "Target": {
-                      "Entity": "receita"
-                    }
-                  }
-                },
-                "State": "Generated"
-              },
-              "receita_has_entity__measure_saldodo_mês": {
-                "Binding": {
-                  "ConceptualEntity": "Receitas"
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Object": {
-                        "Role": "entity__measure.saldodo_mês"
-                      },
-                      "Subject": {
-                        "Role": "receita"
-                      }
-                    },
-                    "ID": "receitas_have_saldodo_mês",
-                    "State": "Generated",
-                    "Weight": 0.99
-                  }
-                ],
-                "Roles": {
-                  "entity__measure.saldodo_mês": {
-                    "Target": {
-                      "Entity": "entity__measure.saldodo_mês"
-                    }
-                  },
-                  "receita": {
-                    "Target": {
-                      "Entity": "receita"
-                    }
-                  }
-                },
-                "State": "Generated"
-              },
-              "receita_has_entity__measure_total_receitas": {
-                "Binding": {
-                  "ConceptualEntity": "Receitas"
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Object": {
-                        "Role": "entity__measure.total_receitas"
-                      },
-                      "Subject": {
-                        "Role": "receita"
-                      }
-                    },
-                    "ID": "receitas_have_total_receitas",
-                    "State": "Generated",
-                    "Weight": 0.99
-                  }
-                ],
-                "Roles": {
-                  "entity__measure.total_receitas": {
-                    "Target": {
-                      "Entity": "entity__measure.total_receitas"
-                    }
-                  },
-                  "receita": {
-                    "Target": {
-                      "Entity": "receita"
                     }
                   }
                 },
@@ -13119,18 +13155,6 @@
             ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "710eac4d-77e3-4006-af9b-ca385a6d9c7e"
-          },
-          {
-            "name": "PatrimônioCriptosTotal",
-            "annotations": [
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"currencyCulture\":\"pt-BR\"}"
-              }
-            ],
-            "expression": "[PatrimonioBTCAtual] + [PatrimonioCriptosAtual]",
-            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
-            "lineageTag": "151d5820-d46f-48ad-9548-9097ee3348aa"
           },
           {
             "name": "PatrimonioCDI_TimeSeries",
