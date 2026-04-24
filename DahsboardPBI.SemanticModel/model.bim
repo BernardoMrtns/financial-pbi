@@ -2330,7 +2330,7 @@
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "_Measures",
-                    "ConceptualProperty": "SaldodoMês"
+                    "ConceptualProperty": "SaldoMes"
                   }
                 },
                 "State": "Generated",
@@ -12726,7 +12726,13 @@
                 "value": "{\"currencyCulture\":\"pt-BR\"}"
               }
             ],
-            "expression": "SUM(Receitas[Valor])",
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    SUM(FluxoCaixaCompleto[Valor]),",
+              "    FluxoCaixaCompleto[Tipo] = \"Entrada\"",
+              ")"
+            ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "00449243-7e45-4381-9bb3-aa121aa25823"
           },
@@ -12742,18 +12748,15 @@
               "",
               "CALCULATE(",
               "    SUM(FluxoCaixaCompleto[Valor]),",
-              "    FILTER(",
-              "        FluxoCaixaCompleto,",
-              "        FluxoCaixaCompleto[Tipo] = \"Saída\"",
-              "            && FluxoCaixaCompleto[Categoria] <> \"Investimento\"",
-              "    )",
+              "    FluxoCaixaCompleto[Tipo] = \"Saída\",",
+              "    FluxoCaixaCompleto[Categoria] <> \"Investimento\"",
               ")"
             ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "c58b48de-0a9a-46ac-827d-0d5325cb7a05"
           },
           {
-            "name": "SaldodoMês",
+            "name": "SaldoMes",
             "annotations": [
               {
                 "name": "PBI_FormatHint",
@@ -13150,9 +13153,9 @@
               "",
               "SWITCH(",
               "    TRUE(),",
-              "    [SaldodoMês] < 0, \"#C00000\",          -- prejuízo",
-              "    [SaldodoMês] < 500, \"#E6B300\",        -- quase nada",
-              "    [SaldodoMês] < 1000, \"#70AD47\",       -- ok",
+              "    [SaldoMes] < 0, \"#C00000\",          -- prejuízo",
+              "    [SaldoMes] < 500, \"#E6B300\",        -- quase nada",
+              "    [SaldoMes] < 1000, \"#70AD47\",       -- ok",
               "    \"#4472C4\"                             -- forte",
               ")"
             ],

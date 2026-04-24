@@ -23,7 +23,7 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "SaldodoMês"
+                  "Property": "SaldoMes"
                 }
               },
               "queryRef": "_Measures.SaldodoMês",
@@ -43,7 +43,7 @@
                     "Entity": "_Measures"
                   }
                 },
-                "Property": "SaldodoMês"
+                "Property": "SaldoMes"
               }
             },
             "direction": "Descending"
