@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import time
+
 import gspread
 import pandas as pd
 from google.oauth2.service_account import Credentials
-from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
+from gspread.exceptions import APIError, SpreadsheetNotFound, WorksheetNotFound
 from requests import RequestException
 
 from config import CREDENTIALS_FILE, SCOPES, SPREADSHEET_ID
@@ -11,6 +13,28 @@ from utils.logging_config import get_logger
 from utils.retry import retry_call
 
 logger = get_logger(__name__)
+
+
+def carregar_worksheet_safe(
+    spreadsheet: gspread.Spreadsheet,
+    nome_aba: str,
+    tentativas: int = 5,
+) -> gspread.Worksheet:
+    last_error: APIError | None = None
+
+    for tentativa in range(tentativas):
+        try:
+            return spreadsheet.worksheet(nome_aba)
+        except APIError as error:
+            last_error = error
+            if "503" not in str(error):
+                raise
+
+            espera = 2 ** tentativa
+            logger.warning("Erro 503 ao carregar a aba %s. Retry em %ss...", nome_aba, espera)
+            time.sleep(espera)
+
+    raise RuntimeError(f"Falhou ao carregar a aba {nome_aba} apos {tentativas} tentativas") from last_error
 
 
 def conectar_google_sheets() -> gspread.Spreadsheet:
@@ -30,7 +54,7 @@ def carregar_aba(
     colunas_esperadas: list[str],
 ) -> pd.DataFrame:
     try:
-        worksheet = spreadsheet.worksheet(nome_aba)
+        worksheet = carregar_worksheet_safe(spreadsheet, nome_aba)
 
         data = retry_call(
             lambda: worksheet.get_all_records(
@@ -60,7 +84,7 @@ def salvar_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df: pd.DataFrame
     nome_aba_temp = f"{nome_aba}_temp"
 
     try:
-        ws_temp = spreadsheet.worksheet(nome_aba_temp)
+        ws_temp = carregar_worksheet_safe(spreadsheet, nome_aba_temp)
         spreadsheet.del_worksheet(ws_temp)
     except WorksheetNotFound:
         pass
@@ -79,7 +103,7 @@ def salvar_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df: pd.DataFrame
     )
 
     try:
-        ws_antiga = spreadsheet.worksheet(nome_aba)
+        ws_antiga = carregar_worksheet_safe(spreadsheet, nome_aba)
         spreadsheet.del_worksheet(ws_antiga)
     except WorksheetNotFound:
         pass
@@ -92,7 +116,7 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
         return
 
     try:
-        worksheet = spreadsheet.worksheet(nome_aba)
+        worksheet = carregar_worksheet_safe(spreadsheet, nome_aba)
     except WorksheetNotFound:
         worksheet = spreadsheet.add_worksheet(title=nome_aba, rows=1000, cols=20)
         worksheet.update("A1", [df_novas_linhas.columns.tolist()])

@@ -1,0 +1,19 @@
+2026-04-26 19:58:48 | INFO | __main__ | ======================================================================
+2026-04-26 19:58:48 | INFO | __main__ | SISTEMA DE CONTROLE FINANCEIRO
+2026-04-26 19:58:48 | INFO | __main__ | ======================================================================
+2026-04-26 19:58:48 | INFO | __main__ | Conectando ao Google Sheets
+2026-04-26 19:58:50 | INFO | __main__ | Conectado com sucesso
+2026-04-26 19:58:50 | INFO | processors.data_loader | Lendo abas do Google Sheets
+2026-04-26 19:58:54 | INFO | __main__ | Dados carregados
+2026-04-26 19:58:54 | INFO | processors.fluxo_caixa | Processando fluxo de caixa
+2026-04-26 19:58:55 | INFO | __main__ | Fluxo de caixa processado
+2026-04-26 19:58:55 | INFO | processors.patrimonio | Processando patrimonio (CDI e Cripto)
+2026-04-26 19:58:58 | INFO | __main__ | Patrimonio calculado
+2026-04-26 19:58:58 | INFO | __main__ | Salvando no Google Sheets
+2026-04-26 19:59:01 | INFO | __main__ | FluxoCaixaCompleto salvo
+2026-04-26 19:59:02 | INFO | __main__ | Nova linha adicionada em InvestimentoBTC
+2026-04-26 19:59:03 | INFO | __main__ | Nova linha adicionada em InvestimentoCDI
+2026-04-26 19:59:04 | INFO | __main__ | Nova linha adicionada em InvestimentoCripto
+2026-04-26 19:59:04 | INFO | __main__ | ======================================================================
+2026-04-26 19:59:04 | INFO | __main__ | PROCESSAMENTO CONCLUIDO COM SUCESSO
+2026-04-26 19:59:04 | INFO | __main__ | ======================================================================
