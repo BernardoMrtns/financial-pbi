@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+import shlex
 
 import pandas as pd
 from telegram import Update
@@ -31,9 +32,9 @@ logger = get_logger(__name__)
 spreadsheet = None
 
 
-def _get_hoje() -> str:
-    """Retorna a data de hoje no formato YYYY-MM-DD."""
-    return datetime.now().strftime("%Y-%m-%d")
+def _get_hoje():
+    """Retorna a data/hora atual como `pandas.Timestamp` (preserva tipo datetime)."""
+    return pd.Timestamp.now()
 
 
 # --- HANDLERS ---
@@ -184,16 +185,37 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar investimento."""
     try:
-        if not context.args or len(context.args) < 4:
+        # Log raw message and parsed args for debugging
+        msg_text = "" if update.message is None else update.message.text or ""
+        logger.debug("/invest raw text: %s | context.args: %s", msg_text, context.args)
+
+        args = context.args or []
+        if len(args) < 4:
+            # Try to parse from raw text (handles quoting and extra spaces)
+            rest = msg_text.lstrip()
+            # remove leading command part
+            if rest.startswith("/invest"):
+                rest = rest[len("/invest"):].strip()
+            # remove bot username suffix if present
+            if rest.startswith("@"):
+                # unlikely, but keep safe
+                parts = rest.split(maxsplit=1)
+                rest = parts[1] if len(parts) > 1 else ""
+            try:
+                args = shlex.split(rest)
+            except Exception:
+                args = rest.split()
+
+        if len(args) < 4:
             await update.message.reply_text(
                 "Erro. Use: /invest <tipo> <operação> <valor> <quantidade>"
             )
             return
 
-        tipo = context.args[0]
-        oper = context.args[1]
-        valor = context.args[2]
-        qtd = context.args[3]
+        tipo = args[0]
+        oper = args[1]
+        valor = args[2]
+        qtd = args[3]
 
         # Note: Investimentos tem colunas adicionais (QuantidadeBTC)
         # Use apenas as colunas base necessárias
@@ -202,11 +224,16 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             columns=SCHEMA_ABAS["Investimentos"]
         )
         # Normalizações: Data preserva hora (DateTime), Valor numeric, Quantidade numeric
-        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=True)
-        df["Valor"] = converter_numero_flexivel(df["Valor"])
-        df["Quantidade"] = pd.to_numeric(df["Quantidade"], errors="coerce").fillna(0.0)
-        df["Categoria"] = df.get("Categoria", pd.Series([""]))
-
+        try:
+            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=True)
+            df["Valor"] = converter_numero_flexivel(df["Valor"])
+            df["Quantidade"] = pd.to_numeric(df["Quantidade"], errors="coerce").fillna(0.0)
+        except Exception as e:
+            logger.exception("Erro ao normalizar dados de investimento: %s", e)
+            await update.message.reply_text(
+                f"Erro ao processar valores do investimento: {e}"
+            )
+            return
         adicionar_linha_aba(spreadsheet, "Investimentos", df)
         logger.info(f"Investimento registrado: {tipo} {oper} - R${valor}")
         await update.message.reply_text(
