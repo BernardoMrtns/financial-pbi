@@ -238,7 +238,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "_Ex: /pix 500 Celular Eletrônicos 100 1_\n\n"
         
         "`/invest tipo operacao valor quantidade`\n"
-        "_Ex: /invest BTC Aporte 1000 0.02_\n\n"
+        "_Ex: /invest BTC Aporte 1000 0.02_\n"
         "_Ex: /invest CDI Aporte 1000 0_\n\n"
         
         "`/help` - Exibir esta mensagem"
