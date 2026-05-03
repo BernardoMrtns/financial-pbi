@@ -123,38 +123,73 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
 
     df_copy = _normalizar_dataframe_para_upload(df_novas_linhas.copy(), nome_aba)
 
+    # Get header from sheet - usar row_values() para pegar apenas a primeira linha
     header_sheet = worksheet.row_values(1)
     header_df = df_copy.columns.tolist()
 
     if not header_sheet:
+        logger.info(f"Aba {nome_aba}: Header vazio, criando novo header")
         worksheet.update("A1", [header_df])
         header_sheet = header_df
     elif header_sheet != header_df:
+        # Handle specific schema mismatches
         if nome_aba == "InvestimentoCDI" and header_sheet == ["Data", "ValorCDI"] and header_df == ["DataHora", "ValorCDI"]:
+            logger.info(f"Aba {nome_aba}: Atualizando header InvestimentoCDI")
             worksheet.update("A1", [["DataHora", "ValorCDI"]])
             header_sheet = ["DataHora", "ValorCDI"]
+        # Handle migration from "Data" to "DataHora" in Investimentos aba
+        elif nome_aba == "Investimentos" and header_sheet[0] == "Data" and header_df[0] == "DataHora":
+            logger.info("Atualizando header da aba Investimentos de 'Data' para 'DataHora'")
+            worksheet.update("A1", [header_df])
+            header_sheet = header_df
         else:
-            raise ValueError(
-                f"Cabecalho incompativel em {nome_aba}. Esperado={header_sheet} Recebido={header_df}"
+            # Log detailed mismatch info for debugging
+            logger.warning(
+                "Cabecalho pode conter espaços ou caracteres diferentes em %s. "
+                "Esperado=%s | Recebido=%s | "
+                "Esperado (repr)=%r | Recebido (repr)=%r",
+                nome_aba, header_sheet, header_df, header_sheet, header_df
             )
+            # Strip and compare without whitespace issues
+            header_sheet_stripped = [h.strip() if isinstance(h, str) else h for h in header_sheet]
+            header_df_stripped = [h.strip() if isinstance(h, str) else h for h in header_df]
+            if header_sheet_stripped != header_df_stripped:
+                raise ValueError(
+                    f"Cabecalho incompativel em {nome_aba}. Esperado={header_sheet} Recebido={header_df}"
+                )
 
     rows_to_append = df_copy.values.tolist()
-    linhas_necessarias = len(rows_to_append) + len(worksheet.get_all_values()) + 5
+    
+    # Get the actual number of rows in the sheet using get_all_records() which excludes empty rows
+    try:
+        records = worksheet.get_all_records(empty2zero=False)
+        current_data_rows = len(records)
+    except Exception:
+        # Fallback to get_all_values if get_all_records fails
+        all_values = worksheet.get_all_values()
+        current_data_rows = len(all_values) - 1  # -1 para excluir o header
+    
+    linhas_necessarias = current_data_rows + 1 + len(rows_to_append) + 5
+
+    logger.debug(f"Aba {nome_aba}: Linhas de dados atuais: {current_data_rows}. Adicionando {len(rows_to_append)} linhas")
 
     if linhas_necessarias > worksheet.row_count:
         worksheet.add_rows(linhas_necessarias - worksheet.row_count)
 
+    # Use append_rows com value_input_option="USER_ENTERED" para inserir ao final
     retry_call(
         lambda: worksheet.append_rows(rows_to_append, value_input_option="USER_ENTERED"),
         (gspread.exceptions.APIError, RequestException),
         f"append em lote na aba {nome_aba}",
     )
+    logger.info(f"Aba {nome_aba}: {len(rows_to_append)} linha(s) adicionada(s) com sucesso ao final da tabela")
 
 
 def _normalizar_dataframe_para_upload(df: pd.DataFrame, nome_aba: str) -> pd.DataFrame:
     for col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[col]):
-            if nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI"}:
+            # Colunas com hora: DataHora para investimentos, outras abas específicas
+            if col == "DataHora" or nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI"}:
                 df[col] = df[col].dt.strftime("%d/%m/%Y %H:%M:%S")
             else:
                 df[col] = df[col].dt.strftime("%d/%m/%Y")

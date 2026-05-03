@@ -60,7 +60,11 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             columns=SCHEMA_ABAS["DebitoAvulso"]
         )
         # Normalizações: Data como date-only, Valor numeric, categoria limpa
-        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        # If Data is already datetime-like, avoid passing to converter_data_flexivel
+        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
+        else:
+            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
         df["Valor"] = converter_numero_flexivel(df["Valor"])
         df["Categoria"] = df["Categoria"].astype(str).str.strip()
 
@@ -93,7 +97,10 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             columns=SCHEMA_ABAS["Receitas"]
         )
         # Normalizações: Data date-only, Valor numeric, categoria limpa
-        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
+        else:
+            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
         df["Valor"] = converter_numero_flexivel(df["Valor"])
         df["Categoria"] = df["Categoria"].astype(str).str.strip()
 
@@ -127,11 +134,17 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             columns=SCHEMA_ABAS["ComprasCartao"]
         )
         # Normalizações: Data date-only, ValorTotal numeric, Parcelas int, Cartao normalized
-        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
+        else:
+            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
         df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
         df["Parcelas"] = pd.to_numeric(df["Parcelas"], errors="coerce").fillna(0).astype(int)
         df["Cartao"] = df["Cartao"].astype(str).apply(normalizar_nome_cartao)
 
+        logger.debug(f"Cartão - Schema esperado: {SCHEMA_ABAS['ComprasCartao']}")
+        logger.debug(f"Cartão - DataFrame colunas: {df.columns.tolist()}")
+        
         adicionar_linha_aba(spreadsheet, "ComprasCartao", df)
         logger.info(f"Compra registrada: {desc} no {cart} - R${valor}")
         await update.message.reply_text(
@@ -164,7 +177,10 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             columns=SCHEMA_ABAS["PixParcelado"]
         )
         # Normalizações: Data date-only, Valores numeric, QtdPagas int
-        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
+            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
+        else:
+            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
         df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
         df["ValorEntrada"] = converter_numero_flexivel(df["ValorEntrada"])
         df["QtdPagas"] = pd.to_numeric(df["QtdPagas"], errors="coerce").fillna(0).astype(int)
@@ -217,17 +233,25 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         valor = args[2]
         qtd = args[3]
 
-        # Note: Investimentos tem colunas adicionais (QuantidadeBTC)
-        # Use apenas as colunas base necessárias
+        # Note: Investimentos tem colunas: DataHora, Tipo, Operacao, Valor, QuantidadeBTC
         df = pd.DataFrame(
-            [[pd.Timestamp.now(), tipo, oper, valor, qtd, ""]],
+            [[pd.Timestamp.now(), tipo, oper, valor, qtd]],
             columns=SCHEMA_ABAS["Investimentos"]
         )
-        # Normalizações: Data preserva hora (DateTime), Valor numeric, Quantidade numeric
+        # Normalizações: DataHora preserva hora (DateTime), Valor numeric, Quantidade numeric
         try:
-            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=True)
+            # If DataHora is already datetime-like, avoid passing to converter_data_flexivel
+            if pd.api.types.is_datetime64_any_dtype(df["DataHora"]) or isinstance(df.loc[0, "DataHora"], pd.Timestamp):
+                df["DataHora"] = pd.to_datetime(df["DataHora"], errors="coerce")
+            else:
+                df["DataHora"] = converter_data_flexivel(df["DataHora"], preservar_hora=True)
+
             df["Valor"] = converter_numero_flexivel(df["Valor"])
-            df["Quantidade"] = pd.to_numeric(df["Quantidade"], errors="coerce").fillna(0.0)
+            df["QuantidadeBTC"] = pd.to_numeric(df["QuantidadeBTC"], errors="coerce").fillna(0.0)
+            
+            logger.debug(f"Investimento - Schema esperado: {SCHEMA_ABAS['Investimentos']}")
+            logger.debug(f"Investimento - DataFrame colunas: {df.columns.tolist()}")
+            logger.debug(f"Investimento - DataFrame valores: {df.values.tolist()}")
         except Exception as e:
             logger.exception("Erro ao normalizar dados de investimento: %s", e)
             await update.message.reply_text(
