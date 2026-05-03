@@ -14,7 +14,7 @@ from config import (
     TIPO_SAIDA,
 )
 from models import Movimentacao
-from utils import calcular_mes_competencia, get_logger
+from utils import calcular_mes_competencia, get_logger, normalizar_nome_cartao
 
 logger = get_logger(__name__)
 
@@ -47,7 +47,8 @@ class FluxoCaixaProcessor:
 
             total = float(r.ValorTotal)
             n_parc = int(r.Parcelas) if pd.notna(r.Parcelas) and r.Parcelas != "" else 1
-            primeira_fat = calcular_mes_competencia(data, getattr(r, "Cartao", ""))
+            cartao = normalizar_nome_cartao(getattr(r, "Cartao", ""))
+            primeira_fat = calcular_mes_competencia(data, cartao)
             if pd.isna(primeira_fat):
                 continue
 
@@ -63,7 +64,7 @@ class FluxoCaixaProcessor:
                         data_competencia=mes_ref,
                         tipo=TIPO_SAIDA,
                         metodo="Cartao de Credito",
-                        conta_cartao=getattr(r, "Cartao", ""),
+                        conta_cartao=cartao,
                         categoria=getattr(r, "Categoria", ""),
                         descricao=f"{getattr(r, 'Descricao', '')} ({i + 1}/{n_parc})",
                         valor=valores[i],
@@ -147,13 +148,14 @@ class FluxoCaixaProcessor:
                         datas_ajustadas.append(nova_data)
 
                 for data_cob in datas_ajustadas:
+                    cartao = normalizar_nome_cartao(getattr(r, "Cartao", ""))
                     self.lista_movimentacoes.append(
                         Movimentacao(
                             data_original=data_cob,
-                            data_competencia=calcular_mes_competencia(data_cob, getattr(r, "Cartao", "")),
+                            data_competencia=calcular_mes_competencia(data_cob, cartao),
                             tipo=TIPO_SAIDA,
                             metodo="Assinatura Recorrente",
-                            conta_cartao=getattr(r, "Cartao", ""),
+                            conta_cartao=cartao,
                             categoria=getattr(r, "Categoria", ""),
                             descricao=f"{getattr(r, 'Nome', '')} (Assinatura)",
                             valor=float(getattr(r, "Valor", 0)),
@@ -247,7 +249,8 @@ class FluxoCaixaProcessor:
             def validar_pgto(row: pd.Series) -> str:
                 if row["Status"] != STATUS_AGUARDANDO_FATURA:
                     return str(row["Status"])
-                ultimo_pago = self.mapa_pagamentos.get(row["Conta_Cartao"], pd.NaT)
+                conta_cartao = normalizar_nome_cartao(row["Conta_Cartao"])
+                ultimo_pago = self.mapa_pagamentos.get(conta_cartao, pd.NaT)
                 if pd.isna(ultimo_pago):
                     return STATUS_PENDENTE
                 return STATUS_PAGO if row["DataCompetencia"] <= ultimo_pago else STATUS_PENDENTE

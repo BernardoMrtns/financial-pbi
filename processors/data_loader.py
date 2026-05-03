@@ -6,7 +6,7 @@ import gspread
 
 from config import SCHEMA_ABAS
 from services.google_sheets import carregar_aba
-from utils import converter_data_flexivel, converter_numero_flexivel, get_logger
+from utils import converter_data_flexivel, converter_numero_flexivel, get_logger, normalizar_nome_cartao
 
 logger = get_logger(__name__)
 
@@ -22,7 +22,12 @@ class DataLoader:
         df_fpg["UltimoCicloPago"] = (
             converter_data_flexivel(df_fpg["UltimoCicloPago"]).dt.to_period("M").dt.to_timestamp()
         )
-        mapa_pagamentos = dict(zip(df_fpg["Cartao"], df_fpg["UltimoCicloPago"]))
+        mapa_pagamentos = dict(
+            zip(
+                df_fpg["Cartao"].map(normalizar_nome_cartao),
+                df_fpg["UltimoCicloPago"],
+            )
+        )
 
         df_compras = carregar_aba(self.spreadsheet, "ComprasCartao", SCHEMA_ABAS["ComprasCartao"])
         df_pix = carregar_aba(self.spreadsheet, "PixParcelado", SCHEMA_ABAS["PixParcelado"])

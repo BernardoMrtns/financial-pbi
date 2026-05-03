@@ -4,6 +4,7 @@ from .data_utils import (
     converter_data_flexivel,
     converter_numero_flexivel,
     obter_cdi_historico,
+    normalizar_nome_cartao,
 )
 from .logging_config import configure_logging, get_logger
 from .retry import retry_call
@@ -17,4 +18,5 @@ __all__ = [
     "calcular_mes_competencia",
     "obter_cdi_historico",
     "calcular_fator_cdi_periodo",
+    "normalizar_nome_cartao",
 ]

@@ -52,11 +52,15 @@ def converter_numero_flexivel(series: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce").fillna(0.0)
 
 
+def normalizar_nome_cartao(cartao: str) -> str:
+    return str(cartao).strip()
+
+
 def calcular_mes_competencia(data_compra: pd.Timestamp, cartao: str = "") -> pd.Timestamp:
     if pd.isna(data_compra):
         return pd.NaT
 
-    dia_fechamento = FECHAMENTO_CARTOES.get(cartao, 8)
+    dia_fechamento = FECHAMENTO_CARTOES.get(normalizar_nome_cartao(cartao), 8)
     if data_compra.day <= dia_fechamento:
         return data_compra.to_period("M").to_timestamp()
     return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()

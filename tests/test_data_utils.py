@@ -1,6 +1,11 @@
 import pandas as pd
 
-from utils.data_utils import calcular_mes_competencia, converter_data_flexivel, converter_numero_flexivel
+from utils.data_utils import (
+    calcular_mes_competencia,
+    converter_data_flexivel,
+    converter_numero_flexivel,
+    normalizar_nome_cartao,
+)
 
 
 def test_converter_numero_flexivel_multiformato() -> None:
@@ -26,3 +31,13 @@ def test_calcular_mes_competencia() -> None:
 
     assert calcular_mes_competencia(compra_antes_fechamento, "Inter") == pd.Timestamp("2026-04-01")
     assert calcular_mes_competencia(compra_apos_fechamento, "Inter") == pd.Timestamp("2026-05-01")
+
+
+def test_calcular_mes_competencia_ignora_espacos_no_cartao() -> None:
+    compra_apos_fechamento = pd.Timestamp("2026-04-10")
+
+    assert calcular_mes_competencia(compra_apos_fechamento, "Inter ") == pd.Timestamp("2026-05-01")
+
+
+def test_normalizar_nome_cartao_remove_espacos() -> None:
+    assert normalizar_nome_cartao(" Nubank ") == "Nubank"
