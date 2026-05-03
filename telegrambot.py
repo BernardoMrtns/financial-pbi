@@ -19,6 +19,11 @@ from services.google_sheets import (
     conectar_google_sheets,
 )
 from utils.logging_config import get_logger
+from utils.data_utils import (
+    converter_data_flexivel,
+    converter_numero_flexivel,
+    normalizar_nome_cartao,
+)
 
 logger = get_logger(__name__)
 
@@ -53,7 +58,11 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             [[_get_hoje(), desc, cat, valor, conta]],
             columns=SCHEMA_ABAS["DebitoAvulso"]
         )
-        
+        # Normalizações: Data como date-only, Valor numeric, categoria limpa
+        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        df["Valor"] = converter_numero_flexivel(df["Valor"])
+        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+
         adicionar_linha_aba(spreadsheet, "DebitoAvulso", df)
         logger.info(f"Débito registrado: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Débito salvo: {desc} (R${valor})")
@@ -82,7 +91,11 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             [[_get_hoje(), desc, cat, valor, conta]],
             columns=SCHEMA_ABAS["Receitas"]
         )
-        
+        # Normalizações: Data date-only, Valor numeric, categoria limpa
+        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        df["Valor"] = converter_numero_flexivel(df["Valor"])
+        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+
         adicionar_linha_aba(spreadsheet, "Receitas", df)
         logger.info(f"Receita registrada: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Receita salva: {desc} (R${valor})")
@@ -112,7 +125,12 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             [[_get_hoje(), desc, cat, cart, valor, parcelas]],
             columns=SCHEMA_ABAS["ComprasCartao"]
         )
-        
+        # Normalizações: Data date-only, ValorTotal numeric, Parcelas int, Cartao normalized
+        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
+        df["Parcelas"] = pd.to_numeric(df["Parcelas"], errors="coerce").fillna(0).astype(int)
+        df["Cartao"] = df["Cartao"].astype(str).apply(normalizar_nome_cartao)
+
         adicionar_linha_aba(spreadsheet, "ComprasCartao", df)
         logger.info(f"Compra registrada: {desc} no {cart} - R${valor}")
         await update.message.reply_text(
@@ -144,7 +162,13 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             [[_get_hoje(), desc, cat, total, entrada, pagas]],
             columns=SCHEMA_ABAS["PixParcelado"]
         )
-        
+        # Normalizações: Data date-only, Valores numeric, QtdPagas int
+        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
+        df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
+        df["ValorEntrada"] = converter_numero_flexivel(df["ValorEntrada"])
+        df["QtdPagas"] = pd.to_numeric(df["QtdPagas"], errors="coerce").fillna(0).astype(int)
+        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+
         adicionar_linha_aba(spreadsheet, "PixParcelado", df)
         logger.info(f"Pix parcelado registrado: {desc} - R${total}")
         await update.message.reply_text(
@@ -174,10 +198,15 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         # Note: Investimentos tem colunas adicionais (QuantidadeBTC)
         # Use apenas as colunas base necessárias
         df = pd.DataFrame(
-            [[_get_hoje(), tipo, oper, valor, qtd, ""]],
+            [[pd.Timestamp.now(), tipo, oper, valor, qtd, ""]],
             columns=SCHEMA_ABAS["Investimentos"]
         )
-        
+        # Normalizações: Data preserva hora (DateTime), Valor numeric, Quantidade numeric
+        df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=True)
+        df["Valor"] = converter_numero_flexivel(df["Valor"])
+        df["Quantidade"] = pd.to_numeric(df["Quantidade"], errors="coerce").fillna(0.0)
+        df["Categoria"] = df.get("Categoria", pd.Series([""]))
+
         adicionar_linha_aba(spreadsheet, "Investimentos", df)
         logger.info(f"Investimento registrado: {tipo} {oper} - R${valor}")
         await update.message.reply_text(
@@ -194,13 +223,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para comando /start."""
     help_text = (
         "🤖 *Bot de Controle Financeiro*\n\n"
-        "Comandos disponíveis:\n\n"
-        "`/debito` - Registrar débito avulso\n"
-        "`/receita` - Registrar receita\n"
-        "`/cartao` - Registrar compra no cartão\n"
-        "`/pix` - Registrar Pix parcelado\n"
-        "`/invest` - Registrar investimento\n"
-        "`/help` - Exibir esta mensagem\n"
+        "*Como usar:*\n\n"
+        
+        "`/debito valor descricao categoria conta`\n"
+        "_Ex: /debito 50 Mercado Alimentação Nubank_\n\n"
+        
+        "`/receita valor descricao categoria conta`\n"
+        "_Ex: /receita 3000 Salário Trabalho Inter_\n\n"
+        
+        "`/cartao valor descricao categoria cartao parcelas`\n"
+        "_Ex: /cartao 1200 Notebook Eletrônicos Nubank 12_\n\n"
+        
+        "`/pix total descricao categoria entrada qtdPagas`\n"
+        "_Ex: /pix 500 Celular Eletrônicos 100 1_\n\n"
+        
+        "`/invest tipo operacao valor quantidade`\n"
+        "_Ex: /invest BTC Aporte 1000 0.02_\n\n"
+        "_Ex: /invest CDI Aporte 1000 0_\n\n"
+        
+        "`/help` - Exibir esta mensagem"
     )
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
