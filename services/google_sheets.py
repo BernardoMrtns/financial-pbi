@@ -176,11 +176,17 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
     if linhas_necessarias > worksheet.row_count:
         worksheet.add_rows(linhas_necessarias - worksheet.row_count)
 
-    # Use append_rows com value_input_option="USER_ENTERED" para inserir ao final
+    # Write rows starting at the first empty data row (after header).
+    # Using an explicit update at the computed start row avoids issues
+    # where view-level sorting/filtering can make newly-appended rows
+    # appear at the top of the sheet.
+    start_row = current_data_rows + 2  # +1 for header, +1 to move to next empty row
+    start_cell = f"A{start_row}"
+
     retry_call(
-        lambda: worksheet.append_rows(rows_to_append, value_input_option="USER_ENTERED"),
+        lambda: worksheet.update(start_cell, rows_to_append, value_input_option="USER_ENTERED"),
         (gspread.exceptions.APIError, RequestException),
-        f"append em lote na aba {nome_aba}",
+        f"escrita em lote na aba {nome_aba} a partir de {start_cell}",
     )
     logger.info(f"Aba {nome_aba}: {len(rows_to_append)} linha(s) adicionada(s) com sucesso ao final da tabela")
 
