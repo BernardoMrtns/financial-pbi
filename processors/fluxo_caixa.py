@@ -25,6 +25,18 @@ class FluxoCaixaProcessor:
         self.mapa_pagamentos = mapa_pagamentos
         self.lista_movimentacoes: list[Movimentacao] = []
 
+    @staticmethod
+    def _normalizar_data_hora(valor: Any) -> pd.Timestamp:
+        if pd.isna(valor):
+            return pd.NaT
+        if isinstance(valor, pd.Timestamp):
+            return valor
+        if isinstance(valor, str):
+            return pd.to_datetime(valor, dayfirst=True, errors="coerce")
+        if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+            return pd.Timestamp("1899-12-30") + pd.to_timedelta(valor, unit="D")
+        return pd.to_datetime(valor, dayfirst=True, errors="coerce")
+
     def processar_todas_movimentacoes(self) -> pd.DataFrame:
         logger.info("Processando fluxo de caixa")
 
@@ -207,7 +219,8 @@ class FluxoCaixaProcessor:
         df_inv = self.dados["investimentos"]
 
         for r in df_inv.itertuples(index=False):
-            if pd.isna(r.Data):
+            data_hora = self._normalizar_data_hora(getattr(r, "DataHora", pd.NaT))
+            if pd.isna(data_hora):
                 continue
 
             operacao = str(r.Operacao).upper().strip()
@@ -216,8 +229,8 @@ class FluxoCaixaProcessor:
             if "APORTE" in operacao:
                 self.lista_movimentacoes.append(
                     Movimentacao(
-                        data_original=r.Data,
-                        data_competencia=r.Data.to_period("M").to_timestamp(),
+                        data_original=data_hora,
+                        data_competencia=data_hora.to_period("M").to_timestamp(),
                         tipo=TIPO_SAIDA,
                         metodo="Investimento",
                         conta_cartao="Conta Corrente",
@@ -230,8 +243,8 @@ class FluxoCaixaProcessor:
             elif "SAQUE" in operacao or "RESGATE" in operacao or "VENDA" in operacao:
                 self.lista_movimentacoes.append(
                     Movimentacao(
-                        data_original=r.Data,
-                        data_competencia=r.Data.to_period("M").to_timestamp(),
+                        data_original=data_hora,
+                        data_competencia=data_hora.to_period("M").to_timestamp(),
                         tipo=TIPO_ENTRADA,
                         metodo="Resgate Investimento",
                         conta_cartao="Conta Corrente",

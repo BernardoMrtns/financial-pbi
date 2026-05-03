@@ -29,6 +29,12 @@ class PatrimonioCalculator:
         self.hoje = pd.Timestamp.today().normalize()
         self._cache_ativos_cripto: dict[str, dict[str, str] | None] = {}
 
+    @staticmethod
+    def _obter_data_hora(serie: pd.Series) -> pd.Series:
+        if "DataHora" in serie.index:
+            return serie["DataHora"]
+        return serie.get("Data", pd.NaT)
+
     def processar_tudo(self) -> dict[str, pd.DataFrame]:
         logger.info("Processando patrimonio (CDI e Cripto)")
 
@@ -40,8 +46,14 @@ class PatrimonioCalculator:
             if not self.df_inv.empty:
                 self.df_inv["Tipo"] = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
                 self.df_inv["Operacao"] = self.df_inv["Operacao"].astype(str).str.upper().str.strip()
-                self.df_inv["Quantidade"] = converter_numero_flexivel(self.df_inv["Quantidade"])
-                self.df_inv["QuantidadeBTC"] = converter_numero_flexivel(self.df_inv["QuantidadeBTC"])
+                if "Quantidade" in self.df_inv.columns:
+                    self.df_inv["Quantidade"] = converter_numero_flexivel(self.df_inv["Quantidade"])
+                else:
+                    self.df_inv["Quantidade"] = 0.0
+                if "QuantidadeBTC" in self.df_inv.columns:
+                    self.df_inv["QuantidadeBTC"] = converter_numero_flexivel(self.df_inv["QuantidadeBTC"])
+                else:
+                    self.df_inv["QuantidadeBTC"] = 0.0
 
                 self.df_inv["QuantidadeCripto"] = self.df_inv["Quantidade"]
                 mask_qtd_zerada = self.df_inv["QuantidadeCripto"] == 0
@@ -81,7 +93,10 @@ class PatrimonioCalculator:
         if df_movimentos_cdi.empty:
             return pd.DataFrame()
 
-        df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce")
+        if "DataHora" in df_movimentos_cdi.columns:
+            df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["DataHora"], errors="coerce")
+        else:
+            df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce")
         df_movimentos_cdi = df_movimentos_cdi[df_movimentos_cdi["DataHora"].notna()].copy()
 
         if df_movimentos_cdi.empty:
@@ -252,7 +267,8 @@ class PatrimonioCalculator:
         if df_btc.empty:
             return pd.DataFrame()
 
-        df_btc = df_btc[df_btc["Data"].notna()]
+        data_coluna = "DataHora" if "DataHora" in df_btc.columns else "Data"
+        df_btc = df_btc[df_btc[data_coluna].notna()]
         if df_btc.empty:
             logger.warning("Nenhuma transacao BTC com data valida")
             return pd.DataFrame()

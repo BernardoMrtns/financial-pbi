@@ -49,7 +49,9 @@ class DataLoader:
             if "Valor" in df.columns:
                 df["Valor"] = converter_numero_flexivel(df["Valor"])
 
-        if "Data" in df_inv.columns:
+        if "DataHora" in df_inv.columns:
+            df_inv["DataHora"] = converter_data_flexivel(df_inv["DataHora"], preservar_hora=True)
+        elif "Data" in df_inv.columns:
             df_inv["Data"] = converter_data_flexivel(df_inv["Data"], preservar_hora=True)
         if "Valor" in df_inv.columns:
             df_inv["Valor"] = converter_numero_flexivel(df_inv["Valor"])
