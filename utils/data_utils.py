@@ -7,7 +7,7 @@ import requests
 from pandas.tseries.offsets import DateOffset
 from requests import RequestException
 
-from config import BACEN_CDI_SERIE_URL, FECHAMENTO_CARTOES, REQUEST_TIMEOUT_SECONDS
+from config import BACEN_CDI_SERIE_URL, REQUEST_TIMEOUT_SECONDS, VENCIMENTO_CARTOES
 from utils.logging_config import get_logger
 from utils.retry import retry_call
 
@@ -60,8 +60,8 @@ def calcular_mes_competencia(data_compra: pd.Timestamp, cartao: str = "") -> pd.
     if pd.isna(data_compra):
         return pd.NaT
 
-    dia_fechamento = FECHAMENTO_CARTOES.get(normalizar_nome_cartao(cartao), 8)
-    if data_compra.day <= dia_fechamento:
+    dia_vencimento = VENCIMENTO_CARTOES.get(normalizar_nome_cartao(cartao), 8)
+    if data_compra.day <= dia_vencimento:
         return data_compra.to_period("M").to_timestamp()
     return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()
 

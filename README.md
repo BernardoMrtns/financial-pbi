@@ -63,6 +63,7 @@ Ajuste os parâmetros em `config.py`:
 Importante:
 
 - `SATOSHIS_PER_BITCOIN` está definido como `100_000_000` (valor correto).
+- `VENCIMENTO_CARTOES` define o dia de vencimento de cada cartão e é usado no cálculo de competência das compras.
 
 ## Execução
 
