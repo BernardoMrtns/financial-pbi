@@ -31,10 +31,48 @@ logger = get_logger(__name__)
 # Variáveis globais inicializadas na startup
 spreadsheet = None
 
+# Usuário autorizado a usar o bot
+AUTHORIZED_USER_ID = 1139123773
+AUTHORIZED_USERNAME = "bernardo_mrtns"
+
 
 def _get_hoje():
     """Retorna a data/hora atual como `pandas.Timestamp` (preserva tipo datetime)."""
     return pd.Timestamp.now()
+
+
+async def _is_authorized(update: Update) -> bool:
+    """Valida se o comando veio do usuário autorizado."""
+    user = update.effective_user
+    message = update.effective_message
+
+    if user is None:
+        if message:
+            await message.reply_text("Acesso negado.")
+        logger.warning("Comando sem usuário identificado foi bloqueado.")
+        return False
+
+    incoming_username = (user.username or "").lstrip("@").lower()
+    expected_username = AUTHORIZED_USERNAME.lower()
+
+    is_allowed = (
+        user.id == AUTHORIZED_USER_ID
+        and incoming_username == expected_username
+    )
+
+    if not is_allowed:
+        if message:
+            await message.reply_text("Acesso negado. Este bot é privado.")
+        logger.warning(
+            "Acesso bloqueado. user_id=%s username=%s first_name=%s last_name=%s",
+            user.id,
+            user.username,
+            user.first_name,
+            user.last_name,
+        )
+        return False
+
+    return True
 
 
 # --- HANDLERS ---
@@ -43,6 +81,9 @@ def _get_hoje():
 async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar débito avulso."""
     try:
+        if not await _is_authorized(update):
+            return
+
         if not context.args or len(context.args) < 4:
             await update.message.reply_text(
                 "Erro. Use: /debito <valor> <descrição> <categoria> <conta>"
@@ -81,6 +122,9 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar receita."""
     try:
+        if not await _is_authorized(update):
+            return
+
         if not context.args or len(context.args) < 4:
             await update.message.reply_text(
                 "Erro. Use: /receita <valor> <descrição> <categoria> <conta>"
@@ -117,6 +161,9 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar compra no cartão."""
     try:
+        if not await _is_authorized(update):
+            return
+
         if not context.args or len(context.args) < 5:
             await update.message.reply_text(
                 "Erro. Use: /cartao <valor> <descrição> <categoria> <cartão> <parcelas>"
@@ -160,6 +207,9 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar Pix parcelado."""
     try:
+        if not await _is_authorized(update):
+            return
+
         if not context.args or len(context.args) < 5:
             await update.message.reply_text(
                 "Erro. Use: /pix <total> <descrição> <categoria> <entrada> <pagas>"
@@ -201,6 +251,9 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar investimento."""
     try:
+        if not await _is_authorized(update):
+            return
+
         # Log raw message and parsed args for debugging
         msg_text = "" if update.message is None else update.message.text or ""
         logger.debug("/invest raw text: %s | context.args: %s", msg_text, context.args)
@@ -272,6 +325,9 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para comando /start."""
+    if not await _is_authorized(update):
+        return
+
     help_text = (
         "🤖 *Bot de Controle Financeiro*\n\n"
         "*Como usar:*\n\n"
@@ -299,6 +355,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para comando /help."""
+    if not await _is_authorized(update):
+        return
+
     await start(update, context)
 
 
