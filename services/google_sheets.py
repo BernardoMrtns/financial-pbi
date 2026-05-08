@@ -15,6 +15,20 @@ from utils.retry import retry_call
 logger = get_logger(__name__)
 
 
+# Colunas monetarias por aba para forcar exibicao como BRL no Google Sheets.
+COLUNAS_MOEDA_POR_ABA: dict[str, set[str]] = {
+    "Assinaturas": {"Valor"},
+    "ComprasCartao": {"ValorTotal"},
+    "DebitoAvulso": {"Valor"},
+    "InvestimentoBTC": {"Valor"},
+    "InvestimentoCDI": {"ValorCDI"},
+    "InvestimentoCripto": {"Valor"},
+    "Investimentos": {"Valor"},
+    "PixParcelado": {"ValorTotal", "ValorEntrada"},
+    "Receitas": {"Valor"},
+}
+
+
 def carregar_worksheet_safe(
     spreadsheet: gspread.Spreadsheet,
     nome_aba: str,
@@ -101,6 +115,7 @@ def salvar_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df: pd.DataFrame
         (gspread.exceptions.APIError, RequestException),
         f"upload da aba temporaria {nome_aba_temp}",
     )
+    _aplicar_formato_moeda(ws_temp, nome_aba, df_copy.columns.tolist())
 
     try:
         ws_antiga = carregar_worksheet_safe(spreadsheet, nome_aba)
@@ -158,6 +173,8 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
                     f"Cabecalho incompativel em {nome_aba}. Esperado={header_sheet} Recebido={header_df}"
                 )
 
+    _aplicar_formato_moeda(worksheet, nome_aba, header_sheet)
+
     rows_to_append = df_copy.values.tolist()
     
     # Get the actual number of rows in the sheet using get_all_records() which excludes empty rows
@@ -203,3 +220,49 @@ def _normalizar_dataframe_para_upload(df: pd.DataFrame, nome_aba: str) -> pd.Dat
         df[col] = df[col].replace("nan", "")
 
     return df.fillna("")
+
+
+def _aplicar_formato_moeda(
+    worksheet: gspread.Worksheet,
+    nome_aba: str,
+    cabecalho: list[str],
+) -> None:
+    colunas_monetarias = COLUNAS_MOEDA_POR_ABA.get(nome_aba)
+    if not colunas_monetarias or not cabecalho:
+        return
+
+    requests: list[dict] = []
+    for indice_coluna, nome_coluna in enumerate(cabecalho):
+        if nome_coluna not in colunas_monetarias:
+            continue
+
+        requests.append(
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet.id,
+                        "startRowIndex": 1,
+                        "startColumnIndex": indice_coluna,
+                        "endColumnIndex": indice_coluna + 1,
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "numberFormat": {
+                                "type": "CURRENCY",
+                                "pattern": "R$ #,##0.00",
+                            }
+                        }
+                    },
+                    "fields": "userEnteredFormat.numberFormat",
+                }
+            }
+        )
+
+    if not requests:
+        return
+
+    retry_call(
+        lambda: worksheet.spreadsheet.batch_update({"requests": requests}),
+        (gspread.exceptions.APIError, RequestException),
+        f"formatacao de moeda BRL na aba {nome_aba}",
+    )
