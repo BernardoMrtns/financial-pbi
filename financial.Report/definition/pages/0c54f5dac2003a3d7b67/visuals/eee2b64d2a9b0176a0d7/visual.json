@@ -398,20 +398,6 @@
             }
           ]
         }
-      },
-      {
-        "name": "15895f198abd28d00e3d",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "InvestimentoCDI"
-              }
-            },
-            "Property": "DataHora"
-          }
-        },
-        "type": "Categorical"
       }
     ]
   }

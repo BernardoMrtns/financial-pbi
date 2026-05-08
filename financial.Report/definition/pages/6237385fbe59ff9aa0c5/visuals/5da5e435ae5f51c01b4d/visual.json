@@ -792,34 +792,6 @@
           ]
         },
         "howCreated": "User"
-      },
-      {
-        "name": "ca2a1216a0342c3f7fdd",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "dCalendario"
-              }
-            },
-            "Property": "AnoMês"
-          }
-        },
-        "type": "Categorical"
-      },
-      {
-        "name": "698c230bed3917c532a5",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "_Measures"
-              }
-            },
-            "Property": "TotalParcelasMes"
-          }
-        },
-        "type": "Advanced"
       }
     ]
   }

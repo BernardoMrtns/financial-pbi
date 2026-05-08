@@ -2228,6 +2228,16 @@
                     "preco medio compra": {
                       "State": "Generated"
                     }
+                  },
+                  {
+                    "Preco Méd. Compra": {
+                      "Source": {
+                        "Agent": "PowerBI.VisualColumnRename",
+                        "Type": "External"
+                      },
+                      "State": "Suggested",
+                      "Weight": 0.9
+                    }
                   }
                 ]
               },
@@ -2243,6 +2253,16 @@
                   {
                     "preco medio venda": {
                       "State": "Generated"
+                    }
+                  },
+                  {
+                    "Preco Méd. Venda": {
+                      "Source": {
+                        "Agent": "PowerBI.VisualColumnRename",
+                        "Type": "External"
+                      },
+                      "State": "Suggested",
+                      "Weight": 0.9
                     }
                   }
                 ]
@@ -3811,20 +3831,120 @@
                   }
                 ]
               },
-              "investimento.data.date_hierarchy": {
+              "investimento.data_hora": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
-                    "Hierarchy": "Date Hierarchy",
-                    "VariationSet": "Variation",
-                    "VariationSource": "Data"
+                    "ConceptualProperty": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data date hierarchy": {
+                    "data hora": {
+                      "State": "Generated"
+                    }
+                  },
+                  {
+                    "DataHora": {
+                      "State": "Generated",
+                      "Type": "Noun",
+                      "Weight": 0.99
+                    }
+                  },
+                  {
+                    "date": {
+                      "State": "Generated",
+                      "Weight": 0.7
+                    }
+                  },
+                  {
+                    "information hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.6
+                    }
+                  },
+                  {
+                    "fact hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.6
+                    }
+                  },
+                  {
+                    "info hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.6
+                    }
+                  },
+                  {
+                    "statistic hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.6
+                    }
+                  },
+                  {
+                    "document hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.582
+                    }
+                  },
+                  {
+                    "figure hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.582
+                    }
+                  },
+                  {
+                    "record hora": {
+                      "Source": {
+                        "Agent": "Thesaurus"
+                      },
+                      "State": "Suggested",
+                      "Type": "Noun",
+                      "Weight": 0.582
+                    }
+                  }
+                ]
+              },
+              "investimento.data_hora.date_hierarchy": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "Investimentos",
+                    "Hierarchy": "Date Hierarchy",
+                    "VariationSet": "Variation",
+                    "VariationSource": "DataHora"
+                  }
+                },
+                "SemanticType": "Time",
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "data hora date hierarchy": {
                       "State": "Generated"
                     }
                   },
@@ -3836,21 +3956,21 @@
                   }
                 ]
               },
-              "investimento.data.day": {
+              "investimento.data_hora.day": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
                     "Hierarchy": "Date Hierarchy",
                     "HierarchyLevel": "Day",
                     "VariationSet": "Variation",
-                    "VariationSource": "Data"
+                    "VariationSource": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data day": {
+                    "data hora day": {
                       "State": "Generated"
                     }
                   },
@@ -3860,92 +3980,92 @@
                     }
                   },
                   {
-                    "information day": {
+                    "information hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "fact day": {
+                    "fact hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "info day": {
+                    "info hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "statistic day": {
+                    "statistic hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "document day": {
+                    "document hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "figure day": {
+                    "figure hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "record day": {
+                    "record hora day": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   }
                 ]
               },
-              "investimento.data.month": {
+              "investimento.data_hora.month": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
                     "Hierarchy": "Date Hierarchy",
                     "HierarchyLevel": "Month",
                     "VariationSet": "Variation",
-                    "VariationSource": "Data"
+                    "VariationSource": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data month": {
+                    "data hora month": {
                       "State": "Generated"
                     }
                   },
@@ -3955,13 +4075,13 @@
                     }
                   },
                   {
-                    "data mth": {
+                    "data hora mth": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.75
+                      "Weight": 0.762
                     }
                   },
                   {
@@ -3975,92 +4095,92 @@
                     }
                   },
                   {
-                    "information month": {
+                    "information hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "fact month": {
+                    "fact hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "info month": {
+                    "info hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "statistic month": {
+                    "statistic hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "document month": {
+                    "document hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "figure month": {
+                    "figure hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "record month": {
+                    "record hora month": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   }
                 ]
               },
-              "investimento.data.quarter": {
+              "investimento.data_hora.quarter": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
                     "Hierarchy": "Date Hierarchy",
                     "HierarchyLevel": "Quarter",
                     "VariationSet": "Variation",
-                    "VariationSource": "Data"
+                    "VariationSource": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data quarter": {
+                    "data hora quarter": {
                       "State": "Generated"
                     }
                   },
@@ -4070,13 +4190,13 @@
                     }
                   },
                   {
-                    "data qtr": {
+                    "data hora qtr": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.833
+                      "Weight": 0.846
                     }
                   },
                   {
@@ -4090,92 +4210,92 @@
                     }
                   },
                   {
-                    "information quarter": {
+                    "information hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "fact quarter": {
+                    "fact hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "info quarter": {
+                    "info hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "statistic quarter": {
+                    "statistic hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "document quarter": {
+                    "document hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "figure quarter": {
+                    "figure hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "record quarter": {
+                    "record hora quarter": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   }
                 ]
               },
-              "investimento.data.year": {
+              "investimento.data_hora.year": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
                     "Hierarchy": "Date Hierarchy",
                     "HierarchyLevel": "Year",
                     "VariationSet": "Variation",
-                    "VariationSource": "Data"
+                    "VariationSource": "DataHora"
                   }
                 },
                 "SemanticType": "Time",
                 "State": "Generated",
                 "Terms": [
                   {
-                    "data year": {
+                    "data hora year": {
                       "State": "Generated"
                     }
                   },
@@ -4185,13 +4305,13 @@
                     }
                   },
                   {
-                    "data yr": {
+                    "data hora yr": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.75
+                      "Weight": 0.762
                     }
                   },
                   {
@@ -4205,73 +4325,73 @@
                     }
                   },
                   {
-                    "information year": {
+                    "information hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "fact year": {
+                    "fact hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "info year": {
+                    "info hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "statistic year": {
+                    "statistic hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.6
+                      "Weight": 0.609
                     }
                   },
                   {
-                    "document year": {
+                    "document hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "figure year": {
+                    "figure hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   },
                   {
-                    "record year": {
+                    "record hora year": {
                       "Source": {
                         "Agent": "Thesaurus"
                       },
                       "State": "Suggested",
                       "Type": "Noun",
-                      "Weight": 0.582
+                      "Weight": 0.591
                     }
                   }
                 ]
@@ -8806,7 +8926,7 @@
                         "Role": "investimento_BTC.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_days",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_days1",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -8839,7 +8959,7 @@
                         "Role": "investimento_BTC.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_months",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_months1",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -8872,7 +8992,7 @@
                         "Role": "investimento_BTC.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_quarters",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_quarters1",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -8905,7 +9025,7 @@
                         "Role": "investimento_BTC.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_years",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_years1",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9178,39 +9298,6 @@
                   "entity__measure.patrimonio_real": {
                     "Target": {
                       "Entity": "entity__measure.patrimonio_real"
-                    }
-                  },
-                  "investimento_BTC": {
-                    "Target": {
-                      "Entity": "investimento_BTC"
-                    }
-                  }
-                },
-                "State": "Generated"
-              },
-              "investimento_BTC_has_entity__measure_patrimônio_criptos_total": {
-                "Binding": {
-                  "ConceptualEntity": "InvestimentoBTC"
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Object": {
-                        "Role": "entity__measure.patrimônio_criptos_total"
-                      },
-                      "Subject": {
-                        "Role": "investimento_BTC"
-                      }
-                    },
-                    "ID": "investimento_BTCs_have_patrimônio_criptos_total",
-                    "State": "Generated",
-                    "Weight": 0.99
-                  }
-                ],
-                "Roles": {
-                  "entity__measure.patrimônio_criptos_total": {
-                    "Target": {
-                      "Entity": "entity__measure.patrimônio_criptos_total"
                     }
                   },
                   "investimento_BTC": {
@@ -9857,7 +9944,7 @@
                         "Role": "investimento_cripto.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_days1",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_days2",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9890,7 +9977,7 @@
                         "Role": "investimento_cripto.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_months1",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_months2",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9923,7 +10010,7 @@
                         "Role": "investimento_cripto.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_quarters1",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_quarters2",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9956,7 +10043,7 @@
                         "Role": "investimento_cripto.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_hora_date_hierarchies_have_data_hora_years1",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_years2",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -9989,7 +10076,7 @@
                         "Role": "investimento_cripto.data_hora"
                       }
                     },
-                    "ID": "data_horas_have_data_hora_date_hierarchies1",
+                    "ID": "data_horas_have_data_hora_date_hierarchies2",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -10163,39 +10250,6 @@
                   "entity__measure.patrimonio_real": {
                     "Target": {
                       "Entity": "entity__measure.patrimonio_real"
-                    }
-                  },
-                  "investimento_cripto": {
-                    "Target": {
-                      "Entity": "investimento_cripto"
-                    }
-                  }
-                },
-                "State": "Generated"
-              },
-              "investimento_cripto_has_entity__measure_patrimônio_criptos_total": {
-                "Binding": {
-                  "ConceptualEntity": "InvestimentoCripto"
-                },
-                "Phrasings": [
-                  {
-                    "Attribute": {
-                      "Object": {
-                        "Role": "entity__measure.patrimônio_criptos_total"
-                      },
-                      "Subject": {
-                        "Role": "investimento_cripto"
-                      }
-                    },
-                    "ID": "investimento_criptos_have_patrimônio_criptos_total",
-                    "State": "Generated",
-                    "Weight": 0.99
-                  }
-                ],
-                "Roles": {
-                  "entity__measure.patrimônio_criptos_total": {
-                    "Target": {
-                      "Entity": "entity__measure.patrimônio_criptos_total"
                     }
                   },
                   "investimento_cripto": {
@@ -10425,7 +10479,7 @@
                 },
                 "State": "Generated"
               },
-              "investimento_data_date_hierarchy_has_investimento_data_day": {
+              "investimento_data_hora_date_hierarchy_has_investimento_data_hora_day": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10433,32 +10487,32 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data.day"
+                        "Role": "investimento.data_hora.day"
                       },
                       "Subject": {
-                        "Role": "investimento.data.date_hierarchy"
+                        "Role": "investimento.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_date_hierarchies_have_data_days",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_days",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "investimento.data.date_hierarchy": {
+                  "investimento.data_hora.date_hierarchy": {
                     "Target": {
-                      "Entity": "investimento.data.date_hierarchy"
+                      "Entity": "investimento.data_hora.date_hierarchy"
                     }
                   },
-                  "investimento.data.day": {
+                  "investimento.data_hora.day": {
                     "Target": {
-                      "Entity": "investimento.data.day"
+                      "Entity": "investimento.data_hora.day"
                     }
                   }
                 },
                 "State": "Generated"
               },
-              "investimento_data_date_hierarchy_has_investimento_data_month": {
+              "investimento_data_hora_date_hierarchy_has_investimento_data_hora_month": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10466,32 +10520,32 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data.month"
+                        "Role": "investimento.data_hora.month"
                       },
                       "Subject": {
-                        "Role": "investimento.data.date_hierarchy"
+                        "Role": "investimento.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_date_hierarchies_have_data_months",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_months",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "investimento.data.date_hierarchy": {
+                  "investimento.data_hora.date_hierarchy": {
                     "Target": {
-                      "Entity": "investimento.data.date_hierarchy"
+                      "Entity": "investimento.data_hora.date_hierarchy"
                     }
                   },
-                  "investimento.data.month": {
+                  "investimento.data_hora.month": {
                     "Target": {
-                      "Entity": "investimento.data.month"
+                      "Entity": "investimento.data_hora.month"
                     }
                   }
                 },
                 "State": "Generated"
               },
-              "investimento_data_date_hierarchy_has_investimento_data_quarter": {
+              "investimento_data_hora_date_hierarchy_has_investimento_data_hora_quarter": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10499,32 +10553,32 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data.quarter"
+                        "Role": "investimento.data_hora.quarter"
                       },
                       "Subject": {
-                        "Role": "investimento.data.date_hierarchy"
+                        "Role": "investimento.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_date_hierarchies_have_data_quarters",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_quarters",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "investimento.data.date_hierarchy": {
+                  "investimento.data_hora.date_hierarchy": {
                     "Target": {
-                      "Entity": "investimento.data.date_hierarchy"
+                      "Entity": "investimento.data_hora.date_hierarchy"
                     }
                   },
-                  "investimento.data.quarter": {
+                  "investimento.data_hora.quarter": {
                     "Target": {
-                      "Entity": "investimento.data.quarter"
+                      "Entity": "investimento.data_hora.quarter"
                     }
                   }
                 },
                 "State": "Generated"
               },
-              "investimento_data_date_hierarchy_has_investimento_data_year": {
+              "investimento_data_hora_date_hierarchy_has_investimento_data_hora_year": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10532,32 +10586,32 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data.year"
+                        "Role": "investimento.data_hora.year"
                       },
                       "Subject": {
-                        "Role": "investimento.data.date_hierarchy"
+                        "Role": "investimento.data_hora.date_hierarchy"
                       }
                     },
-                    "ID": "data_date_hierarchies_have_data_years",
+                    "ID": "data_hora_date_hierarchies_have_data_hora_years",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "investimento.data.date_hierarchy": {
+                  "investimento.data_hora.date_hierarchy": {
                     "Target": {
-                      "Entity": "investimento.data.date_hierarchy"
+                      "Entity": "investimento.data_hora.date_hierarchy"
                     }
                   },
-                  "investimento.data.year": {
+                  "investimento.data_hora.year": {
                     "Target": {
-                      "Entity": "investimento.data.year"
+                      "Entity": "investimento.data_hora.year"
                     }
                   }
                 },
                 "State": "Generated"
               },
-              "investimento_data_has_date_hierarchy": {
+              "investimento_data_hora_has_date_hierarchy": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10565,32 +10619,32 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data.date_hierarchy"
+                        "Role": "investimento.data_hora.date_hierarchy"
                       },
                       "Subject": {
-                        "Role": "investimento.data"
+                        "Role": "investimento.data_hora"
                       }
                     },
-                    "ID": "data_have_data_date_hierarchies",
+                    "ID": "data_horas_have_data_hora_date_hierarchies1",
                     "State": "Generated",
                     "Weight": 0.99
                   }
                 ],
                 "Roles": {
-                  "investimento.data": {
+                  "investimento.data_hora": {
                     "Target": {
-                      "Entity": "investimento.data"
+                      "Entity": "investimento.data_hora"
                     }
                   },
-                  "investimento.data.date_hierarchy": {
+                  "investimento.data_hora.date_hierarchy": {
                     "Target": {
-                      "Entity": "investimento.data.date_hierarchy"
+                      "Entity": "investimento.data_hora.date_hierarchy"
                     }
                   }
                 },
                 "State": "Generated"
               },
-              "investimento_has_data": {
+              "investimento_has_data_hora": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10598,13 +10652,13 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.data"
+                        "Role": "investimento.data_hora"
                       },
                       "Subject": {
                         "Role": "investimento"
                       }
                     },
-                    "ID": "investimentos_have_data",
+                    "ID": "investimentos_have_data_horas",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -10615,9 +10669,9 @@
                       "Entity": "investimento"
                     }
                   },
-                  "investimento.data": {
+                  "investimento.data_hora": {
                     "Target": {
-                      "Entity": "investimento.data"
+                      "Entity": "investimento.data_hora"
                     }
                   }
                 },
@@ -12925,21 +12979,17 @@
               "VAR TotalInvestido =",
               "    CALCULATE (",
               "        SUM ( 'Investimentos'[Valor] ),",
-              "        'Investimentos'[Operacao] = \"Aporte\",",
-              "        'Investimentos'[Tipo] = \"BTC\"",
+              "        'Investimentos'[Operacao] = \"Aporte\"",
               "    )",
+              "",
               "VAR QtdComprada =",
               "    CALCULATE (",
               "        SUM ( 'Investimentos'[QuantidadeCripto] ),",
-              "        'Investimentos'[Operacao] = \"Aporte\",",
-              "        'Investimentos'[Tipo] = \"BTC\"",
+              "        'Investimentos'[Operacao] = \"Aporte\"",
               "    )",
+              "",
               "RETURN",
-              "    IF (",
-              "        QtdComprada > 0,",
-              "        DIVIDE ( TotalInvestido, QtdComprada ),",
-              "        BLANK ()",
-              "    )"
+              "    DIVIDE ( TotalInvestido, QtdComprada )"
             ],
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "2efe12f7-7e69-45ae-855c-fb7ac63a9c64"
@@ -12954,20 +13004,20 @@
             ],
             "expression": [
               "",
-              "VAR TotalResgatado = ",
-              "    CALCULATE(",
-              "        SUM('Investimentos'[Valor]), ",
-              "        'Investimentos'[Operacao] = \"Saque\",",
-              "        'Investimentos'[Tipo] = \"BTC\"",
+              "VAR TotalResgatado =",
+              "    CALCULATE (",
+              "        SUM ( 'Investimentos'[Valor] ),",
+              "        'Investimentos'[Operacao] = \"Saque\"",
               "    )",
-              "VAR QtdVendida = ",
-              "    CALCULATE(",
-              "        SUM('Investimentos'[QuantidadeCripto]), ",
-              "        'Investimentos'[Operacao] = \"Saque\",",
-              "        'Investimentos'[Tipo] = \"BTC\"",
+              "",
+              "VAR QtdVendida =",
+              "    CALCULATE (",
+              "        SUM ( 'Investimentos'[QuantidadeCripto] ),",
+              "        'Investimentos'[Operacao] = \"Saque\"",
               "    )",
-              "RETURN ",
-              "    DIVIDE(TotalResgatado, QtdVendida)"
+              "",
+              "RETURN",
+              "    DIVIDE ( TotalResgatado, QtdVendida )"
             ],
             "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
             "lineageTag": "6d0c142a-4651-443f-81f1-e4cbbb128b3c"
@@ -13001,7 +13051,7 @@
             "annotations": [
               {
                 "name": "PBI_FormatHint",
-                "value": "{\"isGeneralNumber\":true}"
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
               }
             ],
             "expression": [
@@ -13016,6 +13066,7 @@
               ")",
               ""
             ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "f4e5b85f-2f61-46aa-96fc-4d758713080f"
           },
           {
@@ -13091,6 +13142,45 @@
               ")"
             ],
             "lineageTag": "6d716c5f-ea1e-4d96-a141-2af2611a8886"
+          },
+          {
+            "name": "CotacaoCripto",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "VAR UltimaData =",
+              "    CALCULATE(",
+              "        MAX(InvestimentoCripto[DataHora])",
+              "    )",
+              "",
+              "RETURN",
+              "    CALCULATE(",
+              "        MAX(InvestimentoCripto[PrecoCripto]),",
+              "        InvestimentoCripto[DataHora] = UltimaData",
+              "    )"
+            ],
+            "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
+            "lineageTag": "ce2d396e-8b20-4dda-b852-0ed2270ad1c1"
+          },
+          {
+            "name": "Patrimonio Cripto",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "SUM(InvestimentoCripto[ValorReais])"
+            ],
+            "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
+            "lineageTag": "3b09c53d-bf93-464f-af23-93330d716db9"
           }
         ],
         "partitions": [
@@ -13801,7 +13891,7 @@
                 "value": "Automatic"
               }
             ],
-            "dataType": "int64",
+            "dataType": "decimal",
             "formatString": "0",
             "lineageTag": "3745c2ee-9c4f-4aac-aba8-ed6f24f4413d",
             "sourceColumn": "Limite",
@@ -13817,7 +13907,7 @@
               "expression": [
                 "let",
                 "    Fonte = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText(\"i45Wcs7PzUxJVNJRMjY1UIrViVYKTjy8KyUVKGAIFch0y89PAfGNIHyfxKrUIhDfAMIPSy0uKT28sCgzHyhoARELKEotTs0rSS0GCkGNCS3JzAHalIIs5lhcnJmXWFJalFiM0Ouak1pSdHhLXmZyPkjUCGqtZ14Z0KLMXKCx+RDbQfbHAgA=\", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Categoria = _t, Limite = _t]),",
-                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Fonte,{{\"Categoria\", type text}, {\"Limite\", Int64.Type}})",
+                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Fonte,{{\"Categoria\", type text}, {\"Limite\", Currency.Type}})",
                 "in",
                 "    #\"Tipo Alterado\""
               ],

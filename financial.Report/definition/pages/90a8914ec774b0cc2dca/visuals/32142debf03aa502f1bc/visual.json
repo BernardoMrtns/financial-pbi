@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
-  "name": "d89f759bbfde5caa2bc1",
+  "name": "32142debf03aa502f1bc",
   "position": {
-    "x": 0,
-    "y": 467.0025188916876,
-    "z": 3000,
-    "height": 252.99748110831231,
-    "width": 640.20151133501258,
-    "tabOrder": 3000
+    "x": 640.51077414205906,
+    "y": 0,
+    "z": 2000,
+    "height": 719.169992019154,
+    "width": 639.48922585794094,
+    "tabOrder": 2000
   },
   "visual": {
     "visualType": "lineChart",
@@ -20,47 +20,33 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "InvestimentoBTC"
+                      "Entity": "InvestimentoCripto"
                     }
                   },
                   "Property": "DataHora"
                 }
               },
-              "queryRef": "InvestimentoBTC.DataHora",
+              "queryRef": "InvestimentoCripto.DataHora",
               "nativeQueryRef": "DataHora",
               "active": true
             }
           ]
         },
-        "Tooltips": {
+        "Rows": {
           "projections": [
             {
               "field": {
-                "Measure": {
+                "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "_Measures"
+                      "Entity": "InvestimentoCripto"
                     }
                   },
-                  "Property": "SaldoBTC (Qtd)"
+                  "Property": "Ticker"
                 }
               },
-              "queryRef": "_Measures.SaldoBTC (Qtd)",
-              "nativeQueryRef": "SaldoBTC (Qtd)"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "_Measures"
-                    }
-                  },
-                  "Property": "Satoshis"
-                }
-              },
-              "queryRef": "_Measures.Satoshis",
-              "nativeQueryRef": "Satoshis"
+              "queryRef": "InvestimentoCripto.Ticker",
+              "nativeQueryRef": "Ticker"
             }
           ]
         },
@@ -74,12 +60,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "PatrimonioBTC_TimeSeries"
+                  "Property": "CotacaoCripto"
                 }
               },
-              "queryRef": "_Measures.PatrimonioBTC_TimeSeries",
-              "nativeQueryRef": "Patrimonio em Bitcoin",
-              "displayName": "Patrimonio em Bitcoin"
+              "queryRef": "_Measures.CotacaoCripto",
+              "nativeQueryRef": "CotacaoCripto"
             }
           ]
         },
@@ -93,11 +78,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "CotaçãoBTC"
+                  "Property": "Patrimonio Cripto"
                 }
               },
-              "queryRef": "_Measures.CotaçãoBTC",
-              "nativeQueryRef": "CotaçãoBTC"
+              "queryRef": "_Measures.Patrimonio Cripto",
+              "nativeQueryRef": "Patrimonio Cripto"
             }
           ]
         }
@@ -109,7 +94,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "InvestimentoBTC"
+                    "Entity": "InvestimentoCripto"
                   }
                 },
                 "Property": "DataHora"
@@ -244,7 +229,7 @@
                 "color": {
                   "expr": {
                     "Literal": {
-                      "Value": "'#F7931A'"
+                      "Value": "'#E044A7'"
                     }
                   }
                 }
@@ -252,7 +237,7 @@
             }
           },
           "selector": {
-            "metadata": "_Measures.PatrimonioBTC_TimeSeries"
+            "metadata": "_Measures.CotaçãoSOL"
           }
         },
         {
@@ -261,9 +246,8 @@
               "solid": {
                 "color": {
                   "expr": {
-                    "ThemeDataColor": {
-                      "ColorId": 6,
-                      "Percent": 0
+                    "Literal": {
+                      "Value": "'#E044A7'"
                     }
                   }
                 }
@@ -271,7 +255,61 @@
             }
           },
           "selector": {
-            "metadata": "_Measures.CotaçãoBTC"
+            "metadata": "_Measures.CotacaoCripto"
+          }
+        },
+        {
+          "properties": {
+            "fill": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#02FF4E'"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Patrimonio Cripto"
+          }
+        }
+      ],
+      "smallMultiplesLayout": [
+        {
+          "properties": {
+            "gridLineColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 0,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subheader": [
+        {
+          "properties": {
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 0,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       ]
@@ -311,6 +349,53 @@
               "expr": {
                 "Literal": {
                   "Value": "true"
+                }
+              }
+            },
+            "themedTitleFontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 1,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            },
+            "themedValueFontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#1E1E1E'"
+                    }
+                  }
+                }
+              }
+            },
+            "actionFontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 1,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            },
+            "themedBackground": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 0,
+                      "Percent": -0.2
+                    }
+                  }
                 }
               }
             }
@@ -368,6 +453,59 @@
         },
         "type": "RelativeDate",
         "howCreated": "User"
+      },
+      {
+        "name": "31440a6f6eb9139d6ee8",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "InvestimentoCripto"
+              }
+            },
+            "Property": "Ticker"
+          }
+        },
+        "type": "Categorical",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "i",
+              "Entity": "InvestimentoCripto",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "In": {
+                  "Expressions": [
+                    {
+                      "Column": {
+                        "Expression": {
+                          "SourceRef": {
+                            "Source": "i"
+                          }
+                        },
+                        "Property": "Ticker"
+                      }
+                    }
+                  ],
+                  "Values": [
+                    [
+                      {
+                        "Literal": {
+                          "Value": "'SOL'"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          ]
+        }
       }
     ]
   }
