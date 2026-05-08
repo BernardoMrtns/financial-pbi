@@ -46,26 +46,27 @@ class PatrimonioCalculator:
             if not self.df_inv.empty:
                 self.df_inv["Tipo"] = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
                 self.df_inv["Operacao"] = self.df_inv["Operacao"].astype(str).str.upper().str.strip()
+                
                 if "Quantidade" in self.df_inv.columns:
                     self.df_inv["Quantidade"] = converter_numero_flexivel(self.df_inv["Quantidade"])
                 else:
                     self.df_inv["Quantidade"] = 0.0
-                if "QuantidadeBTC" in self.df_inv.columns:
-                    self.df_inv["QuantidadeBTC"] = converter_numero_flexivel(self.df_inv["QuantidadeBTC"])
+                
+                if "QuantidadeCripto" in self.df_inv.columns:
+                    self.df_inv["QuantidadeCripto"] = converter_numero_flexivel(self.df_inv["QuantidadeCripto"])
                 else:
-                    self.df_inv["QuantidadeBTC"] = 0.0
+                    self.df_inv["QuantidadeCripto"] = 0.0
 
-                self.df_inv["QuantidadeCripto"] = self.df_inv["Quantidade"]
+                # CORREÇÃO: Aplica a 'Quantidade' genérica APENAS onde a 'QuantidadeCripto' estiver zerada
                 mask_qtd_zerada = self.df_inv["QuantidadeCripto"] == 0
                 self.df_inv.loc[mask_qtd_zerada, "QuantidadeCripto"] = self.df_inv.loc[
-                    mask_qtd_zerada, "QuantidadeBTC"
+                    mask_qtd_zerada, "Quantidade"
                 ]
 
+                # MELHORIA: Vetorização da conversão de Satoshi para Bitcoin (remove o FOR lento)
                 mask_btc = self.df_inv["Tipo"] == "BTC"
-                for idx in self.df_inv[mask_btc].index:
-                    qtd = self.df_inv.loc[idx, "QuantidadeCripto"]
-                    if qtd >= 1_000_000 and qtd == int(qtd):
-                        self.df_inv.loc[idx, "QuantidadeCripto"] = qtd / SATOSHIS_PER_BITCOIN
+                mask_satoshi = mask_btc & (self.df_inv["QuantidadeCripto"] >= 1_000_000) & (self.df_inv["QuantidadeCripto"] % 1 == 0)
+                self.df_inv.loc[mask_satoshi, "QuantidadeCripto"] = self.df_inv.loc[mask_satoshi, "QuantidadeCripto"] / SATOSHIS_PER_BITCOIN
 
                 self.df_inv["Sinal"] = self.df_inv["Operacao"].apply(self._definir_sinal)
                 self.df_inv["ValorLiquido"] = self.df_inv["Valor"] * self.df_inv["Sinal"]
@@ -93,10 +94,16 @@ class PatrimonioCalculator:
         if df_movimentos_cdi.empty:
             return pd.DataFrame()
 
+        # MELHORIA: dayfirst=True adicionado para interpretar datas BR (DD/MM/YYYY) corretamente
         if "DataHora" in df_movimentos_cdi.columns:
-            df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["DataHora"], errors="coerce")
+            df_movimentos_cdi["DataHora"] = pd.to_datetime(
+                df_movimentos_cdi["DataHora"], errors="coerce", dayfirst=True
+            )
         else:
-            df_movimentos_cdi["DataHora"] = pd.to_datetime(df_movimentos_cdi["Data"], errors="coerce")
+            df_movimentos_cdi["DataHora"] = pd.to_datetime(
+                df_movimentos_cdi["Data"], errors="coerce", dayfirst=True
+            )
+            
         df_movimentos_cdi = df_movimentos_cdi[df_movimentos_cdi["DataHora"].notna()].copy()
 
         if df_movimentos_cdi.empty:

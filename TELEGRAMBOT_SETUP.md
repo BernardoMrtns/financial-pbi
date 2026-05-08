@@ -115,7 +115,7 @@ Colunas: `Data, Descrição, Categoria, ValorTotal, ValorEntrada, QtdPagas`
 ```
 /invest <tipo> <operação> <valor> <quantidade>
 ```
-Colunas: `Data, Tipo, Operação, Valor, Quantidade, QuantidadeBTC`
+Colunas: `Data, Tipo, Operação, Valor, Quantidade, QuantidadeCripto`
 
 ---
 

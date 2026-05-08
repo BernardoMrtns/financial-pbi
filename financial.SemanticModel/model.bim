@@ -4292,22 +4292,22 @@
                   }
                 ]
               },
-              "investimento.quantidade_BTC": {
+              "investimento.quantidade_cripto": {
                 "Definition": {
                   "Binding": {
                     "ConceptualEntity": "Investimentos",
-                    "ConceptualProperty": "QuantidadeBTC"
+                    "ConceptualProperty": "QuantidadeCripto"
                   }
                 },
                 "State": "Generated",
                 "Terms": [
                   {
-                    "quantidade BTC": {
+                    "quantidade cripto": {
                       "State": "Generated"
                     }
                   },
                   {
-                    "QuantidadeBTC": {
+                    "QuantidadeCripto": {
                       "State": "Generated",
                       "Type": "Noun",
                       "Weight": 0.99
@@ -10722,7 +10722,7 @@
                 },
                 "State": "Generated"
               },
-              "investimento_has_quantidade_BTC": {
+              "investimento_has_quantidade_cripto": {
                 "Binding": {
                   "ConceptualEntity": "Investimentos"
                 },
@@ -10730,13 +10730,13 @@
                   {
                     "Attribute": {
                       "Object": {
-                        "Role": "investimento.quantidade_BTC"
+                        "Role": "investimento.quantidade_cripto"
                       },
                       "Subject": {
                         "Role": "investimento"
                       }
                     },
-                    "ID": "investimentos_have_quantidade_BTCs",
+                    "ID": "investimentos_have_quantidade_criptos",
                     "State": "Generated",
                     "Weight": 0.99
                   }
@@ -10747,9 +10747,9 @@
                       "Entity": "investimento"
                     }
                   },
-                  "investimento.quantidade_BTC": {
+                  "investimento.quantidade_cripto": {
                     "Target": {
-                      "Entity": "investimento.quantidade_BTC"
+                      "Entity": "investimento.quantidade_cripto"
                     }
                   }
                 },
@@ -12930,7 +12930,7 @@
               "    )",
               "VAR QtdComprada =",
               "    CALCULATE (",
-              "        SUM ( 'Investimentos'[QuantidadeBTC] ),",
+              "        SUM ( 'Investimentos'[QuantidadeCripto] ),",
               "        'Investimentos'[Operacao] = \"Aporte\",",
               "        'Investimentos'[Tipo] = \"BTC\"",
               "    )",
@@ -12962,7 +12962,7 @@
               "    )",
               "VAR QtdVendida = ",
               "    CALCULATE(",
-              "        SUM('Investimentos'[QuantidadeBTC]), ",
+              "        SUM('Investimentos'[QuantidadeCripto]), ",
               "        'Investimentos'[Operacao] = \"Saque\",",
               "        'Investimentos'[Tipo] = \"BTC\"",
               "    )",
@@ -13884,7 +13884,7 @@
             "summarizeBy": "sum"
           },
           {
-            "name": "QuantidadeBTC",
+            "name": "QuantidadeCripto",
             "annotations": [
               {
                 "name": "SummarizationSetBy",
@@ -13897,7 +13897,7 @@
             ],
             "dataType": "double",
             "lineageTag": "4f433283-8054-410b-83e2-ea96f5102e15",
-            "sourceColumn": "QuantidadeBTC",
+            "sourceColumn": "QuantidadeCripto",
             "summarizeBy": "sum"
           },
           {
@@ -13941,7 +13941,7 @@
                 "    Fonte = GoogleSheets.Contents(\"https://docs.google.com/spreadsheets/d/1JGj93l-FB4TCVMyGFQaNu7_k3_Jz4uFy_7DWUA5dQBY/edit?usp=sharing\"),",
                 "    Investimentos_Table = Fonte{[name=\"Investimentos\",ItemKind=\"Table\"]}[Data],",
                 "    #\"Cabeçalhos Promovidos\" = Table.PromoteHeaders(Investimentos_Table, [PromoteAllScalars=true]),",
-                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(#\"Cabeçalhos Promovidos\",{{\"DataHora\", type date}, {\"Tipo\", type text}, {\"Operacao\", type text}, {\"Valor\", Currency.Type}, {\"QuantidadeBTC\", type number}})",
+                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(#\"Cabeçalhos Promovidos\",{{\"DataHora\", type date}, {\"Tipo\", type text}, {\"Operacao\", type text}, {\"Valor\", Currency.Type}, {\"QuantidadeCripto\", type number}})",
                 "in",
                 "    #\"Tipo Alterado\""
               ],

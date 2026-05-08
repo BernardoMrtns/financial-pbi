@@ -259,7 +259,7 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.debug("/invest raw text: %s | context.args: %s", msg_text, context.args)
 
         args = context.args or []
-        if len(args) < 4:
+        if len(args) < 3:
             # Try to parse from raw text (handles quoting and extra spaces)
             rest = msg_text.lstrip()
             # remove leading command part
@@ -275,7 +275,8 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             except Exception:
                 args = rest.split()
 
-        if len(args) < 4:
+        # Minimum required: tipo, operacao, valor
+        if len(args) < 3:
             await update.message.reply_text(
                 "Erro. Use: /invest <tipo> <operação> <valor> <quantidade>"
             )
@@ -284,9 +285,19 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         tipo = args[0]
         oper = args[1]
         valor = args[2]
-        qtd = args[3]
 
-        # Note: Investimentos tem colunas: DataHora, Tipo, Operacao, Valor, QuantidadeBTC
+        # If investment is CDI, quantidade is optional and always 0
+        if tipo.strip().lower() == "cdi":
+            qtd = "0"
+        else:
+            if len(args) < 4:
+                await update.message.reply_text(
+                    "Erro. Use: /invest <tipo> <operação> <valor> <quantidade>"
+                )
+                return
+            qtd = args[3]
+
+        # Note: Investimentos tem colunas: DataHora, Tipo, Operacao, Valor, QuantidadeCripto
         df = pd.DataFrame(
             [[pd.Timestamp.now(), tipo, oper, valor, qtd]],
             columns=SCHEMA_ABAS["Investimentos"]
@@ -300,7 +311,7 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                 df["DataHora"] = converter_data_flexivel(df["DataHora"], preservar_hora=True)
 
             df["Valor"] = converter_numero_flexivel(df["Valor"])
-            df["QuantidadeBTC"] = pd.to_numeric(df["QuantidadeBTC"], errors="coerce").fillna(0.0)
+            df["QuantidadeCripto"] = pd.to_numeric(df["QuantidadeCripto"], errors="coerce").fillna(0.0)
             
             logger.debug(f"Investimento - Schema esperado: {SCHEMA_ABAS['Investimentos']}")
             logger.debug(f"Investimento - DataFrame colunas: {df.columns.tolist()}")
