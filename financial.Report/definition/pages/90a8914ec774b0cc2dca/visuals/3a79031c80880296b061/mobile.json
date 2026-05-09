@@ -45,7 +45,24 @@
   },
   "visualContainerObjects": {
     "background": [],
-    "visualTooltip": [],
+    "visualTooltip": [
+      {
+        "properties": {
+          "themedTitleFontColor": {
+            "solid": {
+              "color": {
+                "expr": {
+                  "ThemeDataColor": {
+                    "ColorId": 0,
+                    "Percent": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
     "title": [
       {
         "properties": {

@@ -213,6 +213,27 @@
                   "isToggled": true
                 }
               ]
+            },
+            {
+              "identityValues": [
+                {
+                  "Literal": {
+                    "Value": "datetime'2026-05-01T00:00:00'"
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "identityValues": [
+                    {
+                      "Literal": {
+                        "Value": "'Nubank'"
+                      }
+                    }
+                  ],
+                  "isToggled": true
+                }
+              ]
             }
           ]
         }
@@ -364,6 +385,62 @@
           ]
         },
         "howCreated": "User"
+      },
+      {
+        "name": "1a803e352aef5926289c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "dCalendario"
+              }
+            },
+            "Property": "AnoMês"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "52cd2b765228203ab327",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "FluxoCaixaCompleto"
+              }
+            },
+            "Property": "Conta_Cartao"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "1b6ba5e0473f35a21674",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "FluxoCaixaCompleto"
+              }
+            },
+            "Property": "Descricao"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "af839eeb8e194228ac50",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "TotalParcelasMes"
+          }
+        },
+        "type": "Advanced"
       }
     ]
   }
