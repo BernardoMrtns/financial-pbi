@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 🔥 já garante compatibilidade futura
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TZ: America/Sao_Paulo
 
     steps:
       - name: Checkout do código
@@ -36,6 +37,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Verificar timezone
+        run: |
+          date
+          python -c "from datetime import datetime; print(datetime.now())"
 
       - name: Executar script
         run: python main.py
