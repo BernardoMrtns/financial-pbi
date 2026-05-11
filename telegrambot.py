@@ -1,6 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 import shlex
+import subprocess
+import sys
+from typing import Optional
 
 import pandas as pd
 from telegram import Update
@@ -358,6 +361,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "`/invest tipo operacao valor quantidade`\n"
         "_Ex: /invest BTC Aporte 1000 0.02_\n"
         "_Ex: /invest CDI Aporte 1000 0_\n\n"
+
+        "`/run-script` - Executa o main.py em segundo plano\n\n"
         
         "`/help` - Exibir esta mensagem"
     )
@@ -370,6 +375,33 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     await start(update, context)
+
+
+async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler para executar o main.py em segundo plano."""
+    if not await _is_authorized(update):
+        return
+
+    script_path = Path(__file__).resolve().with_name("main.py")
+
+    if not script_path.exists():
+        await update.message.reply_text("Erro: main.py não foi encontrado.")
+        return
+
+    try:
+        process = subprocess.Popen(
+            [sys.executable, str(script_path)],
+            cwd=str(script_path.parent),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+        logger.info("main.py iniciado pelo Telegram. pid=%s", process.pid)
+        await update.message.reply_text(
+            f"✅ main.py iniciado em segundo plano. PID: {process.pid}"
+        )
+    except Exception as e:
+        logger.error("Erro ao iniciar main.py: %s", e, exc_info=True)
+        await update.message.reply_text(f"Erro ao iniciar main.py: {e}")
 
 
 def main() -> None:
@@ -417,6 +449,7 @@ def main() -> None:
     app.add_handler(CommandHandler("cartao", cartao_cmd))
     app.add_handler(CommandHandler("pix", pix_cmd))
     app.add_handler(CommandHandler("invest", invest_cmd))
+    app.add_handler(CommandHandler("run-script", run_script_cmd))
 
     logger.info("Bot iniciado e aguardando mensagens...")
     logger.info(f"Timeout de requisição: {TELEGRAM_REQUEST_TIMEOUT}s")
