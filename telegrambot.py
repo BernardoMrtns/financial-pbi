@@ -362,7 +362,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "_Ex: /invest BTC Aporte 1000 0.02_\n"
         "_Ex: /invest CDI Aporte 1000 0_\n\n"
 
-        "`/run-script` - Executa o main.py em segundo plano\n\n"
+        "`/run_script` - Executa o main.py em segundo plano\n\n"
         
         "`/help` - Exibir esta mensagem"
     )
@@ -449,7 +449,7 @@ def main() -> None:
     app.add_handler(CommandHandler("cartao", cartao_cmd))
     app.add_handler(CommandHandler("pix", pix_cmd))
     app.add_handler(CommandHandler("invest", invest_cmd))
-    app.add_handler(CommandHandler("run-script", run_script_cmd))
+    app.add_handler(CommandHandler("run_script", run_script_cmd))
 
     logger.info("Bot iniciado e aguardando mensagens...")
     logger.info(f"Timeout de requisição: {TELEGRAM_REQUEST_TIMEOUT}s")
