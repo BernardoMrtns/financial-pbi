@@ -13195,10 +13195,6 @@
               {
                 "name": "SummarizationSetBy",
                 "value": "Automatic"
-              },
-              {
-                "name": "UnderlyingDateTimeDataType",
-                "value": "Date"
               }
             ],
             "dataType": "dateTime",
@@ -13224,10 +13220,6 @@
               {
                 "name": "SummarizationSetBy",
                 "value": "Automatic"
-              },
-              {
-                "name": "UnderlyingDateTimeDataType",
-                "value": "Date"
               }
             ],
             "dataType": "dateTime",
@@ -13359,14 +13351,15 @@
                 "let",
                 "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"fluxo_caixa\"]}[Data],",
-                "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
-                "    Renamed = Table.RenameColumns(Cleaned,{",
+                "    ",
+                "    // Pulamos a remoção do ID e vamos direto para renomear",
+                "    Renamed = Table.RenameColumns(Table,{",
                 "        {\"data_original\", \"DataOriginal\"}, {\"data_competencia\", \"DataCompetencia\"},",
                 "        {\"tipo\", \"Tipo\"}, {\"metodo\", \"Metodo\"}, {\"conta_cartao\", \"Conta_Cartao\"},",
                 "        {\"categoria\", \"Categoria\"}, {\"descricao\", \"Descricao\"}, {\"valor\", \"Valor\"},",
                 "        {\"status\", \"Status\"}, {\"valor_fluxo\", \"ValorFluxo\"}",
                 "    }),",
-                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Renamed,{{\"DataOriginal\", type date}, {\"DataCompetencia\", type date}, {\"ValorFluxo\", Currency.Type}, {\"Valor\", Currency.Type}, {\"Tipo\", type text}, {\"Metodo\", type text}, {\"Conta_Cartao\", type text}, {\"Categoria\", type text}, {\"Descricao\", type text}, {\"Status\", type text}})",
+                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Renamed,{{\"DataOriginal\", type datetime}, {\"DataCompetencia\", type datetime}, {\"Tipo\", type text}, {\"Metodo\", type text}, {\"Conta_Cartao\", type text}, {\"Categoria\", type text}, {\"Descricao\", type text}, {\"Valor\", Currency.Type}, {\"Status\", type text}, {\"ValorFluxo\", Currency.Type}})",
                 "in",
                 "    #\"Tipo Alterado\""
               ],
