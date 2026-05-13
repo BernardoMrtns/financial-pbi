@@ -114,7 +114,7 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         df["Categoria"] = df["Categoria"].astype(str).str.strip()
 
         adicionar_linha_aba(spreadsheet, "DebitoAvulso", df)
-	    adicionar_linha_db("DebitoAvulso", df)
+        adicionar_linha_db("DebitoAvulso", df)
         logger.info(f"Débito registrado: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Débito salvo: {desc} (R${valor})")
     except Exception as e:
@@ -154,7 +154,7 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         df["Categoria"] = df["Categoria"].astype(str).str.strip()
 
         adicionar_linha_aba(spreadsheet, "Receitas", df)
-	    adicionar_linha_db("Receitas", df)
+        adicionar_linha_db("Receitas", df)
         logger.info(f"Receita registrada: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Receita salva: {desc} (R${valor})")
     except Exception as e:
@@ -199,7 +199,7 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.debug(f"Cartão - DataFrame colunas: {df.columns.tolist()}")
         
         adicionar_linha_aba(spreadsheet, "ComprasCartao", df)
-	    adicionar_linha_db("ComprasCartao", df)
+        adicionar_linha_db("ComprasCartao", df)
         logger.info(f"Compra registrada: {desc} no {cart} - R${valor}")
         await update.message.reply_text(
             f"✅ Compra salva: {desc}\nCartão: {cart}\nValor: R${valor}\nParcelas: {parcelas}"
@@ -244,7 +244,7 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         df["Categoria"] = df["Categoria"].astype(str).str.strip()
 
         adicionar_linha_aba(spreadsheet, "PixParcelado", df)
-	    adicionar_linha_db("PixParcelado", df)
+        adicionar_linha_db("PixParcelado", df)
         logger.info(f"Pix parcelado registrado: {desc} - R${total}")
         await update.message.reply_text(
             f"✅ Pix parcelado salvo: {desc}\nTotal: R${total}\nEntrada: R${entrada}\nParceladas: {pagas}"
@@ -331,7 +331,7 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             )
             return
         adicionar_linha_aba(spreadsheet, "Investimentos", df)
-	    adicionar_linha_db("Investimentos", df)
+        adicionar_linha_db("Investimentos", df)
         logger.info(f"Investimento registrado: {tipo} {oper} - R${valor}")
         await update.message.reply_text(
             f"✅ Investimento salvo: {tipo}\nOperação: {oper}\nValor: R${valor}\nQuantidade: {qtd}"
