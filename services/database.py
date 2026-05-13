@@ -2,11 +2,11 @@ import pandas as pd
 import re
 from sqlalchemy import create_engine
 from utils.logging_config import get_logger
+from config import DB_URL
 
 logger = get_logger(__name__)
 
 # Configuração do Banco de Dados
-DB_URL = "postgresql://admin_finance:Eu120105_@147.15.20.126:5432/financial_db?client_encoding=utf8"
 engine = create_engine(DB_URL)
 
 # Mapeamento do nome da Aba do Sheets para o nome da Tabela no PostgreSQL
