@@ -21,8 +21,9 @@ from services.google_sheets import (
     adicionar_linha_aba,
     carregar_worksheet_safe,
     conectar_google_sheets,
+    salvar_aba,
 )
-from services.database import adicionar_linha_db
+from services.database import adicionar_linha_db, atualizar_tabela_completa
 from utils.logging_config import get_logger
 from utils.data_utils import (
     converter_data_flexivel,
@@ -105,7 +106,6 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             columns=SCHEMA_ABAS["DebitoAvulso"]
         )
         # Normalizações: Data como date-only, Valor numeric, categoria limpa
-        # If Data is already datetime-like, avoid passing to converter_data_flexivel
         if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
             df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
         else:
@@ -256,6 +256,86 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+async def pagarpix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Atualiza a quantidade de parcelas pagas de um Pix Parcelado"""
+    if not await _is_authorized(update):
+        return
+
+    try:
+        # Pega os argumentos ignorando aspas (ex: /pagarpix "Iphone 15" 3)
+        args = shlex.split(update.message.text)[1:]
+        
+        if len(args) < 1:
+            await update.message.reply_text(
+                "⚠️ Uso correto:\n"
+                "`/pagarpix \"Nome do Item\"` (Adiciona +1 parcela paga)\n"
+                "`/pagarpix \"Nome do Item\" 3` (Define exatamente 3 parcelas pagas)", 
+                parse_mode="Markdown"
+            )
+            return
+        
+        nome_item = args[0]
+        
+        await update.message.reply_text(f"⏳ Buscando Pix Parcelado '{nome_item}'...")
+
+        # 1. Carregar aba atual no formato DataFrame
+        ws = carregar_worksheet_safe(spreadsheet, "PixParcelado")
+        dados = ws.get_all_records()
+        if not dados:
+            await update.message.reply_text("❌ A aba PixParcelado está vazia ou não foi encontrada.")
+            return
+            
+        df = pd.DataFrame(dados)
+        
+        # Confirme se os nomes das colunas na sua planilha são exatamente esses:
+        col_item = "Item"
+        col_pagas = "QtdPagas"
+        
+        if col_item not in df.columns or col_pagas not in df.columns:
+            await update.message.reply_text(f"❌ Colunas '{col_item}' ou '{col_pagas}' não encontradas na planilha.")
+            return
+
+        # 2. Localizar o item (ignorando maiúsculas/minúsculas)
+        mask = df[col_item].astype(str).str.lower() == nome_item.lower()
+        if not mask.any():
+            await update.message.reply_text(f"❌ Item '{nome_item}' não encontrado na aba PixParcelado.")
+            return
+            
+        # Pega a primeira ocorrência encontrada
+        idx = df[mask].index[0]
+        qtd_atual = df.at[idx, col_pagas]
+        
+        # Tratamento de célula vazia
+        if pd.isna(qtd_atual) or str(qtd_atual).strip() == '':
+            qtd_atual = 0
+        else:
+            qtd_atual = int(qtd_atual)
+        
+        # 3. Atualizar a quantidade
+        if len(args) > 1:
+            nova_qtd = int(args[1]) # O usuário passou o número exato
+            df.at[idx, col_pagas] = nova_qtd
+        else:
+            df.at[idx, col_pagas] = qtd_atual + 1 # Apenas soma 1
+            
+        nova_qtd_pagas = df.at[idx, col_pagas]
+        
+        # 4. Salvar tudo no Google Sheets (Sobrescrevendo a aba inteira)
+        salvar_aba(spreadsheet, "PixParcelado", df)
+        
+        # 5. Salvar tudo no PostgreSQL (Sobrescrevendo a tabela inteira)
+        atualizar_tabela_completa("PixParcelado", df)
+        
+        await update.message.reply_text(
+            f"✅ Pix Parcelado '{nome_item}' atualizado com sucesso!\n"
+            f"📊 Parcelas pagas: {qtd_atual} ➡️ {nova_qtd_pagas}"
+        )
+        
+    except Exception as e:
+        logger.exception("Erro no comando /pagarpix")
+        await update.message.reply_text(f"❌ Ocorreu um erro ao atualizar o Pix: {str(e)}")
+
+
 async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler para registrar investimento."""
     try:
@@ -363,6 +443,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         "`/pix total descricao categoria entrada qtdPagas`\n"
         "_Ex: /pix 500 Celular Eletrônicos 100 1_\n\n"
+
+        "`/pagarpix \"Nome do Item\" [qtd_pagas]`\n"
+        "_Ex: /pagarpix \"Celular\" (adiciona 1 parcela)_\n"
+        "_Ex: /pagarpix \"Celular\" 3 (define exatamente 3 parcelas)_\n\n"
         
         "`/invest tipo operacao valor quantidade`\n"
         "_Ex: /invest BTC Aporte 1000 0.02_\n"
@@ -454,6 +538,7 @@ def main() -> None:
     app.add_handler(CommandHandler("receita", receita))
     app.add_handler(CommandHandler("cartao", cartao_cmd))
     app.add_handler(CommandHandler("pix", pix_cmd))
+    app.add_handler(CommandHandler("pagarpix", pagarpix_cmd))
     app.add_handler(CommandHandler("invest", invest_cmd))
     app.add_handler(CommandHandler("run_script", run_script_cmd))
 
