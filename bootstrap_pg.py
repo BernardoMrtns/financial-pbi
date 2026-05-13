@@ -9,12 +9,20 @@ DB_URL = "postgresql://admin_finance:Eu120105_@localhost:5432/financial_db"
 engine = create_engine(DB_URL)
 
 def normalize_column_names(columns):
-    """Converts Google Sheets headers like 'ContaDestino' to 'conta_destino'."""
+    """Converts headers like 'ValorCDI' to 'valor_cdi' instead of 'valor_c_d_i'."""
     normalized = []
     for col in columns:
+        # 1. Remove caracteres especiais
         col = re.sub(r'[^a-zA-Z0-9]', '_', col)
-        # FIXED: Removed the '=' sign from the regex
-        col = re.sub(r'(?<!^)([A-Z])', r'_\1', col).lower()
+        
+        # 2. Lógica para siglas: Mantém sequências de maiúsculas juntas
+        # Ex: ValorCDI -> Valor_CDI
+        col = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', col)
+        
+        # 3. Converte para minúsculo
+        col = col.lower()
+        
+        # 4. Limpa underlines duplicados
         col = re.sub(r'_+', '_', col).strip('_')
         normalized.append(col)
     return normalized
