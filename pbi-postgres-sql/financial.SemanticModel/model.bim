@@ -13160,7 +13160,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"investimento_cdi\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -13349,7 +13349,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"fluxo_caixa\"]}[Data],",
                 "    ",
                 "    // Pulamos a remoção do ID e vamos direto para renomear",
@@ -13420,7 +13420,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"limites\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{{\"cartao\", \"Cartao\"}, {\"limite_total\", \"LimiteTotal\"}}),",
@@ -13529,7 +13529,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"receitas\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -13711,7 +13711,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"investimentos\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -14234,7 +14234,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"wishlist\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -14261,7 +14261,7 @@
           },
           {
             "name": "PBI_ResultType",
-            "value": "Table"
+            "value": "Exception"
           }
         ],
         "columns": [
@@ -14361,7 +14361,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"wishlist_cssbuy\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -14683,7 +14683,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"investimento_btc\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",
@@ -14825,7 +14825,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Source = PostgreSQL.Database(\"147.15.20.126\", \"financial_db\"),",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
                 "    Table = Source{[Schema=\"public\",Item=\"investimento_cripto\"]}[Data],",
                 "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
                 "    Renamed = Table.RenameColumns(Cleaned,{",

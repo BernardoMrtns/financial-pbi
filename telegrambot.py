@@ -13,6 +13,7 @@ from telegram.request import HTTPXRequest
 
 from config import (
     SCHEMA_ABAS,
+    COLUNAS_SHEETS,  # Importe o novo dicionário
     STATUS_PAGO,
     TIPO_ENTRADA,
     TIPO_SAIDA,
@@ -88,7 +89,6 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if not await _is_authorized(update):
             return
-
         if not context.args or len(context.args) < 4:
             await update.message.reply_text(
                 "Erro. Use: /debito <valor> <descrição> <categoria> <conta>"
@@ -100,21 +100,17 @@ async def debito(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         cat = context.args[-2]
         conta = context.args[-1]
 
-        # Criar DataFrame com as colunas do schema
-        df = pd.DataFrame(
-            [[_get_hoje(), desc, cat, valor, conta]],
-            columns=SCHEMA_ABAS["DebitoAvulso"]
-        )
-        # Normalizações: Data como date-only, Valor numeric, categoria limpa
-        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
-        else:
-            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
-        df["Valor"] = converter_numero_flexivel(df["Valor"])
-        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+        cols = COLUNAS_SHEETS["DebitoAvulso"]
+        data_dict = {
+            cols["data"]: datetime.now().strftime("%d/%m/%Y"),
+            cols["descricao"]: desc,
+            cols["categoria"]: cat,
+            cols["valor"]: valor,
+            cols["conta"]: conta,
+        }
 
-        adicionar_linha_aba(spreadsheet, "DebitoAvulso", df)
-        adicionar_linha_db("DebitoAvulso", df)
+        adicionar_linha_aba(spreadsheet, "DebitoAvulso", data_dict)
+        adicionar_linha_db("DebitoAvulso", pd.DataFrame([data_dict]))
         logger.info(f"Débito registrado: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Débito salvo: {desc} (R${valor})")
     except Exception as e:
@@ -129,7 +125,6 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if not await _is_authorized(update):
             return
-
         if not context.args or len(context.args) < 4:
             await update.message.reply_text(
                 "Erro. Use: /receita <valor> <descrição> <categoria> <conta>"
@@ -141,20 +136,17 @@ async def receita(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         cat = context.args[-2]
         conta = context.args[-1]
 
-        df = pd.DataFrame(
-            [[_get_hoje(), desc, cat, valor, conta]],
-            columns=SCHEMA_ABAS["Receitas"]
-        )
-        # Normalizações: Data date-only, Valor numeric, categoria limpa
-        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
-        else:
-            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
-        df["Valor"] = converter_numero_flexivel(df["Valor"])
-        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+        cols = COLUNAS_SHEETS["Receitas"]
+        data_dict = {
+            cols["data"]: datetime.now().strftime("%d/%m/%Y"),
+            cols["descricao"]: desc,
+            cols["categoria"]: cat,
+            cols["valor"]: valor,
+            cols["conta"]: conta,
+        }
 
-        adicionar_linha_aba(spreadsheet, "Receitas", df)
-        adicionar_linha_db("Receitas", df)
+        adicionar_linha_aba(spreadsheet, "Receitas", data_dict)
+        adicionar_linha_db("Receitas", pd.DataFrame([data_dict]))
         logger.info(f"Receita registrada: {desc} - R${valor}")
         await update.message.reply_text(f"✅ Receita salva: {desc} (R${valor})")
     except Exception as e:
@@ -169,7 +161,6 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     try:
         if not await _is_authorized(update):
             return
-
         if not context.args or len(context.args) < 5:
             await update.message.reply_text(
                 "Erro. Use: /cartao <valor> <descrição> <categoria> <cartão> <parcelas>"
@@ -182,24 +173,18 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         cart = context.args[-2]
         parcelas = context.args[-1]
 
-        df = pd.DataFrame(
-            [[_get_hoje(), desc, cat, cart, valor, parcelas]],
-            columns=SCHEMA_ABAS["ComprasCartao"]
-        )
-        # Normalizações: Data date-only, ValorTotal numeric, Parcelas int, Cartao normalized
-        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
-        else:
-            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
-        df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
-        df["Parcelas"] = pd.to_numeric(df["Parcelas"], errors="coerce").fillna(0).astype(int)
-        df["Cartao"] = df["Cartao"].astype(str).apply(normalizar_nome_cartao)
+        cols = COLUNAS_SHEETS["ComprasCartao"]
+        data_dict = {
+            cols["data"]: datetime.now().strftime("%d/%m/%Y"),
+            cols["descricao"]: desc,
+            cols["categoria"]: cat,
+            cols["cartao"]: normalizar_nome_cartao(cart),
+            cols["valor_total"]: valor,
+            cols["parcelas"]: parcelas,
+        }
 
-        logger.debug(f"Cartão - Schema esperado: {SCHEMA_ABAS['ComprasCartao']}")
-        logger.debug(f"Cartão - DataFrame colunas: {df.columns.tolist()}")
-        
-        adicionar_linha_aba(spreadsheet, "ComprasCartao", df)
-        adicionar_linha_db("ComprasCartao", df)
+        adicionar_linha_aba(spreadsheet, "ComprasCartao", data_dict)
+        adicionar_linha_db("ComprasCartao", pd.DataFrame([data_dict]))
         logger.info(f"Compra registrada: {desc} no {cart} - R${valor}")
         await update.message.reply_text(
             f"✅ Compra salva: {desc}\nCartão: {cart}\nValor: R${valor}\nParcelas: {parcelas}"
@@ -216,7 +201,6 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if not await _is_authorized(update):
             return
-
         if not context.args or len(context.args) < 5:
             await update.message.reply_text(
                 "Erro. Use: /pix <total> <descrição> <categoria> <entrada> <pagas>"
@@ -229,22 +213,18 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         entrada = context.args[-2]
         pagas = context.args[-1]
 
-        df = pd.DataFrame(
-            [[_get_hoje(), desc, cat, total, entrada, pagas]],
-            columns=SCHEMA_ABAS["PixParcelado"]
-        )
-        # Normalizações: Data date-only, Valores numeric, QtdPagas int
-        if pd.api.types.is_datetime64_any_dtype(df["Data"]) or isinstance(df.loc[0, "Data"], pd.Timestamp):
-            df["Data"] = pd.to_datetime(df["Data"], errors="coerce").dt.normalize()
-        else:
-            df["Data"] = converter_data_flexivel(df["Data"], preservar_hora=False)
-        df["ValorTotal"] = converter_numero_flexivel(df["ValorTotal"])
-        df["ValorEntrada"] = converter_numero_flexivel(df["ValorEntrada"])
-        df["QtdPagas"] = pd.to_numeric(df["QtdPagas"], errors="coerce").fillna(0).astype(int)
-        df["Categoria"] = df["Categoria"].astype(str).str.strip()
+        cols = COLUNAS_SHEETS["PixParcelado"]
+        data_dict = {
+            cols["data"]: datetime.now().strftime("%d/%m/%Y"),
+            cols["descricao"]: desc,
+            cols["categoria"]: cat,
+            cols["valor_total"]: total,
+            cols["valor_entrada"]: entrada,
+            cols["qtd_pagas"]: pagas,
+        }
 
-        adicionar_linha_aba(spreadsheet, "PixParcelado", df)
-        adicionar_linha_db("PixParcelado", df)
+        adicionar_linha_aba(spreadsheet, "PixParcelado", data_dict)
+        adicionar_linha_db("PixParcelado", pd.DataFrame([data_dict]))
         logger.info(f"Pix parcelado registrado: {desc} - R${total}")
         await update.message.reply_text(
             f"✅ Pix parcelado salvo: {desc}\nTotal: R${total}\nEntrada: R${entrada}\nParceladas: {pagas}"
@@ -261,79 +241,68 @@ async def pagarpix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await _is_authorized(update):
         return
 
-    try:
-        # Pega os argumentos ignorando aspas (ex: /pagarpix "Iphone 15" 3)
-        args = shlex.split(update.message.text)[1:]
-        
-        if len(args) < 1:
-            await update.message.reply_text(
-                "⚠️ Uso correto:\n"
-                "`/pagarpix \"Nome do Item\"` (Adiciona +1 parcela paga)\n"
-                "`/pagarpix \"Nome do Item\" 3` (Define exatamente 3 parcelas pagas)", 
-                parse_mode="Markdown"
-            )
-            return
-        
-        nome_item = args[0]
-        
-        await update.message.reply_text(f"⏳ Buscando Pix Parcelado '{nome_item}'...")
+    if not context.args:
+        await update.message.reply_text("Uso: /pagarpix \"Nome do Item\" [parcelas]")
+        return
 
-        # 1. Carregar aba atual no formato DataFrame
-        ws = carregar_worksheet_safe(spreadsheet, "PixParcelado")
+    # Parsing robusto para nomes com espaços entre aspas
+    try:
+        args_str = " ".join(context.args)
+        parsed_args = shlex.split(args_str)
+        item_name = parsed_args[0]
+        qtd_manual = int(parsed_args[1]) if len(parsed_args) > 1 else None
+    except Exception:
+        await update.message.reply_text("❌ Erro nos argumentos. Use aspas para nomes compostos.")
+        return
+
+    aba_nome = "PixParcelado"
+    # Obtém os nomes reais das colunas da planilha
+    cols_map = COLUNAS_SHEETS[aba_nome]
+    col_item = cols_map["descricao"]   # ex: "Descricao"
+    col_pagas = cols_map["qtd_pagas"]  # ex: "QtdPagas"
+
+    try:
+        ws = carregar_worksheet_safe(spreadsheet, aba_nome)
         dados = ws.get_all_records()
         if not dados:
-            await update.message.reply_text("❌ A aba PixParcelado está vazia ou não foi encontrada.")
-            return
-            
-        df = pd.DataFrame(dados)
-        
-        # Confirme se os nomes das colunas na sua planilha são exatamente esses:
-        col_item = "Item"
-        col_pagas = "QtdPagas"
-        
-        if col_item not in df.columns or col_pagas not in df.columns:
-            await update.message.reply_text(f"❌ Colunas '{col_item}' ou '{col_pagas}' não encontradas na planilha.")
+            await update.message.reply_text(f"❌ A aba {aba_nome} está vazia ou não foi encontrada.")
             return
 
-        # 2. Localizar o item (ignorando maiúsculas/minúsculas)
-        mask = df[col_item].astype(str).str.lower() == nome_item.lower()
-        if not mask.any():
-            await update.message.reply_text(f"❌ Item '{nome_item}' não encontrado na aba PixParcelado.")
+        df = pd.DataFrame(dados)
+
+        if col_item not in df.columns or col_pagas not in df.columns:
+            await update.message.reply_text(f"❌ Erro de estrutura: Colunas '{col_item}' ou '{col_pagas}' não encontradas.")
             return
-            
-        # Pega a primeira ocorrência encontrada
-        idx = df[mask].index[0]
-        qtd_atual = df.at[idx, col_pagas]
-        
-        # Tratamento de célula vazia
-        if pd.isna(qtd_atual) or str(qtd_atual).strip() == '':
-            qtd_atual = 0
+
+        # Procura o item na coluna de descrição (conteúdo parcial, case-insensitive)
+        mask = df[col_item].astype(str).str.contains(item_name, case=False, na=False)
+        indices = df.index[mask].tolist()
+
+        if not indices:
+            await update.message.reply_text(f"❓ Item '{item_name}' não encontrado na aba {aba_nome}.")
+            return
+
+        idx = indices[0]
+        nome_completo = df.at[idx, col_item]
+
+        # Atualiza o valor
+        if qtd_manual is not None:
+            nova_qtd = qtd_manual
         else:
-            qtd_atual = int(qtd_atual)
-        
-        # 3. Atualizar a quantidade
-        if len(args) > 1:
-            nova_qtd = int(args[1]) # O usuário passou o número exato
-            df.at[idx, col_pagas] = nova_qtd
-        else:
-            df.at[idx, col_pagas] = qtd_atual + 1 # Apenas soma 1
-            
-        nova_qtd_pagas = df.at[idx, col_pagas]
-        
-        # 4. Salvar tudo no Google Sheets (Sobrescrevendo a aba inteira)
-        salvar_aba(spreadsheet, "PixParcelado", df)
-        
-        # 5. Salvar tudo no PostgreSQL (Sobrescrevendo a tabela inteira)
-        atualizar_tabela_completa("PixParcelado", df)
-        
-        await update.message.reply_text(
-            f"✅ Pix Parcelado '{nome_item}' atualizado com sucesso!\n"
-            f"📊 Parcelas pagas: {qtd_atual} ➡️ {nova_qtd_pagas}"
-        )
-        
+            valor_atual = str(df.at[idx, col_pagas]).replace(",", ".")
+            nova_qtd = int(float(valor_atual)) + 1
+
+        df.at[idx, col_pagas] = nova_qtd
+
+        # Sincroniza ambos os sistemas
+        salvar_aba(spreadsheet, aba_nome, df)
+        atualizar_tabela_completa(aba_nome, df)
+
+        await update.message.reply_text(f"✅ Pagamento de '{nome_completo}' atualizado para {nova_qtd} parcelas.")
+
     except Exception as e:
-        logger.exception("Erro no comando /pagarpix")
-        await update.message.reply_text(f"❌ Ocorreu um erro ao atualizar o Pix: {str(e)}")
+        logger.error(f"Erro no pagarpix: {e}")
+        await update.message.reply_text(f"❌ Erro ao processar: {str(e)}")
 
 
 async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -386,36 +355,28 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             qtd = args[3]
 
         # Note: Investimentos tem colunas: DataHora, Tipo, Operacao, Valor, QuantidadeCripto
-        df = pd.DataFrame(
-            [[pd.Timestamp.now(), tipo, oper, valor, qtd]],
-            columns=SCHEMA_ABAS["Investimentos"]
-        )
-        # Normalizações: DataHora preserva hora (DateTime), Valor numeric, Quantidade numeric
-        try:
-            # If DataHora is already datetime-like, avoid passing to converter_data_flexivel
-            if pd.api.types.is_datetime64_any_dtype(df["DataHora"]) or isinstance(df.loc[0, "DataHora"], pd.Timestamp):
-                df["DataHora"] = pd.to_datetime(df["DataHora"], errors="coerce")
-            else:
-                df["DataHora"] = converter_data_flexivel(df["DataHora"], preservar_hora=True)
+        cols = COLUNAS_SHEETS["Investimentos"]
+        data_dict = {
+            cols["datahora"]: pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S"),
+            cols["tipo"]: tipo,
+            cols["operacao"]: oper,
+            cols["valor"]: valor,
+            cols["quantidade_cripto"]: qtd,
+        }
 
-            df["Valor"] = converter_numero_flexivel(df["Valor"])
-            df["QuantidadeCripto"] = pd.to_numeric(df["QuantidadeCripto"], errors="coerce").fillna(0.0)
-            
-            logger.debug(f"Investimento - Schema esperado: {SCHEMA_ABAS['Investimentos']}")
-            logger.debug(f"Investimento - DataFrame colunas: {df.columns.tolist()}")
-            logger.debug(f"Investimento - DataFrame valores: {df.values.tolist()}")
+        try:
+            # deixar a normalização para adicionar_linha_db
+            adicionar_linha_aba(spreadsheet, "Investimentos", data_dict)
+            adicionar_linha_db("Investimentos", pd.DataFrame([data_dict]))
+            logger.info(f"Investimento registrado: {tipo} {oper} - R${valor}")
+            await update.message.reply_text(
+                f"✅ Investimento salvo: {tipo}\nOperação: {oper}\nValor: R${valor}\nQuantidade: {qtd}"
+            )
         except Exception as e:
-            logger.exception("Erro ao normalizar dados de investimento: %s", e)
+            logger.exception("Erro ao registrar investimento: %s", e)
             await update.message.reply_text(
                 f"Erro ao processar valores do investimento: {e}"
             )
-            return
-        adicionar_linha_aba(spreadsheet, "Investimentos", df)
-        adicionar_linha_db("Investimentos", df)
-        logger.info(f"Investimento registrado: {tipo} {oper} - R${valor}")
-        await update.message.reply_text(
-            f"✅ Investimento salvo: {tipo}\nOperação: {oper}\nValor: R${valor}\nQuantidade: {qtd}"
-        )
     except Exception as e:
         logger.error(f"Erro ao registrar investimento: {e}")
         await update.message.reply_text(
