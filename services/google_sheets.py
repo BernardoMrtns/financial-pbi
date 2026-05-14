@@ -138,7 +138,6 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
 
     df_copy = _normalizar_dataframe_para_upload(df_novas_linhas.copy(), nome_aba)
 
-    # Get header from sheet - usar row_values() para pegar apenas a primeira linha
     header_sheet = worksheet.row_values(1)
     header_df = df_copy.columns.tolist()
 
@@ -147,25 +146,20 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
         worksheet.update("A1", [header_df])
         header_sheet = header_df
     elif header_sheet != header_df:
-        # Handle specific schema mismatches
         if nome_aba == "InvestimentoCDI" and header_sheet == ["Data", "ValorCDI"] and header_df == ["DataHora", "ValorCDI"]:
             logger.info(f"Aba {nome_aba}: Atualizando header InvestimentoCDI")
             worksheet.update("A1", [["DataHora", "ValorCDI"]])
             header_sheet = ["DataHora", "ValorCDI"]
-        # Handle migration from "Data" to "DataHora" in Investimentos aba
         elif nome_aba == "Investimentos" and header_sheet[0] == "Data" and header_df[0] == "DataHora":
             logger.info("Atualizando header da aba Investimentos de 'Data' para 'DataHora'")
             worksheet.update("A1", [header_df])
             header_sheet = header_df
         else:
-            # Log detailed mismatch info for debugging
             logger.warning(
                 "Cabecalho pode conter espaços ou caracteres diferentes em %s. "
-                "Esperado=%s | Recebido=%s | "
-                "Esperado (repr)=%r | Recebido (repr)=%r",
-                nome_aba, header_sheet, header_df, header_sheet, header_df
+                "Esperado=%s | Recebido=%s",
+                nome_aba, header_sheet, header_df
             )
-            # Strip and compare without whitespace issues
             header_sheet_stripped = [h.strip() if isinstance(h, str) else h for h in header_sheet]
             header_df_stripped = [h.strip() if isinstance(h, str) else h for h in header_df]
             if header_sheet_stripped != header_df_stripped:
@@ -177,14 +171,12 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
 
     rows_to_append = df_copy.values.tolist()
     
-    # Get the actual number of rows in the sheet using get_all_records() which excludes empty rows
     try:
         records = worksheet.get_all_records(empty2zero=False)
         current_data_rows = len(records)
     except Exception:
-        # Fallback to get_all_values if get_all_records fails
         all_values = worksheet.get_all_values()
-        current_data_rows = len(all_values) - 1  # -1 para excluir o header
+        current_data_rows = len(all_values) - 1
     
     linhas_necessarias = current_data_rows + 1 + len(rows_to_append) + 5
 
@@ -193,11 +185,7 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
     if linhas_necessarias > worksheet.row_count:
         worksheet.add_rows(linhas_necessarias - worksheet.row_count)
 
-    # Write rows starting at the first empty data row (after header).
-    # Using an explicit update at the computed start row avoids issues
-    # where view-level sorting/filtering can make newly-appended rows
-    # appear at the top of the sheet.
-    start_row = current_data_rows + 2  # +1 for header, +1 to move to next empty row
+    start_row = current_data_rows + 2 
     start_cell = f"A{start_row}"
 
     retry_call(
@@ -211,7 +199,6 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
 def _normalizar_dataframe_para_upload(df: pd.DataFrame, nome_aba: str) -> pd.DataFrame:
     for col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[col]):
-            # Colunas com hora: DataHora para investimentos, outras abas específicas
             if col == "DataHora" or nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI"}:
                 df[col] = df[col].dt.strftime("%d/%m/%Y %H:%M:%S")
             else:
@@ -266,3 +253,67 @@ def _aplicar_formato_moeda(
         (gspread.exceptions.APIError, RequestException),
         f"formatacao de moeda BRL na aba {nome_aba}",
     )
+
+
+# ==========================================
+#        NOVA FUNÇÃO PARA O BOT (UPDATE)
+# ==========================================
+
+def atualizar_registro_sheets(
+    spreadsheet: gspread.Spreadsheet, 
+    nome_aba: str, 
+    coluna_chave: str, 
+    valor_chave: any, 
+    dados_atualizacao: dict
+) -> None:
+    """
+    Atualiza células específicas de uma linha no Google Sheets baseada numa chave de busca.
+    Ex: atualizar_registro_sheets(spreadsheet, "FaturasPagas", "cartao", "Nubank", {"ultimo_ciclo_pago": "01/06/2026"})
+    """
+    try:
+        worksheet = carregar_worksheet_safe(spreadsheet, nome_aba)
+        
+        dados = retry_call(
+            lambda: worksheet.get_all_values(),
+            (gspread.exceptions.APIError, RequestException),
+            f"leitura para update na aba {nome_aba}"
+        )
+        
+        if not dados:
+            logger.warning(f"Aba {nome_aba} está vazia.")
+            return
+            
+        cabecalho = [str(c).strip() for c in dados[0]]
+        
+        if coluna_chave not in cabecalho:
+            logger.error(f"Coluna chave '{coluna_chave}' não encontrada no cabeçalho da aba {nome_aba}.")
+            return
+            
+        idx_chave = cabecalho.index(coluna_chave)
+        linha_alvo = None
+        valor_chave_str = str(valor_chave).strip().lower()
+        
+        for i, linha in enumerate(dados[1:], start=2):
+            if len(linha) > idx_chave and str(linha[idx_chave]).strip().lower() == valor_chave_str:
+                linha_alvo = i
+                break
+                
+        if not linha_alvo:
+            logger.warning(f"Registo com {coluna_chave} = {valor_chave} não encontrado na aba {nome_aba}.")
+            return
+            
+        for col_update, novo_valor in dados_atualizacao.items():
+            if col_update in cabecalho:
+                idx_update = cabecalho.index(col_update) + 1 
+                
+                retry_call(
+                    lambda: worksheet.update_cell(linha_alvo, idx_update, novo_valor),
+                    (gspread.exceptions.APIError, RequestException),
+                    f"update de célula na aba {nome_aba}"
+                )
+                logger.info(f"Sheets -> Aba {nome_aba}: Linha {linha_alvo}, Coluna '{col_update}' atualizada para {novo_valor}")
+            else:
+                logger.warning(f"Coluna alvo '{col_update}' não encontrada na aba {nome_aba}.")
+                
+    except Exception as e:
+        logger.error(f"Erro ao atualizar registo na aba {nome_aba} no Sheets: {e}")

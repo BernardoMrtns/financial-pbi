@@ -26,9 +26,8 @@
                   "Property": "Total$Wishlist"
                 }
               },
-              "queryRef": "_Measures.TotalWishlist",
-              "nativeQueryRef": "Valor Total Da Wishlist",
-              "displayName": "Valor Total Da Wishlist"
+              "queryRef": "_Measures.Total$Wishlist",
+              "nativeQueryRef": "Total$Wishlist"
             }
           ]
         }

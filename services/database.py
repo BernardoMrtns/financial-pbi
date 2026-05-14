@@ -22,7 +22,10 @@ TABELAS_MAP = {
     "FluxoCaixaCompleto": "fluxo_caixa",
     "InvestimentoCDI": "investimento_cdi",
     "InvestimentoBTC": "investimento_btc",
-    "InvestimentoCripto": "investimento_cripto"
+    "InvestimentoCripto": "investimento_cripto",
+    "FaturasPagas": "faturas_pagas",
+    "Assinaturas": "assinaturas",
+    "Wishlist": "wishlist"
 }
 
 def normalize_column_names(columns):
@@ -84,3 +87,54 @@ def atualizar_tabela_completa(nome_aba: str, df: pd.DataFrame) -> None:
         logger.info(f"Tabela '{tabela}' atualizada com sucesso (delete & append).")
     except Exception as e:
         logger.error(f"Erro ao atualizar tabela '{tabela}' no PostgreSQL: {e}")
+
+# ==========================================
+#        NOVAS FUNÇÕES PARA O BOT (UPDATE/SELECT)
+# ==========================================
+
+def buscar_registro_db(nome_aba: str, coluna_chave: str, valor_chave: any) -> dict:
+    """Busca um único registo na base de dados com base numa chave."""
+    tabela = TABELAS_MAP.get(nome_aba, nome_aba)
+    
+    col_chave_norm = normalize_column_names([coluna_chave])[0]
+    query = text(f"SELECT * FROM {tabela} WHERE {col_chave_norm} = :valor_chave LIMIT 1")
+    
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(query, {"valor_chave": valor_chave}).mappings().fetchone()
+            return dict(result) if result else {}
+    except Exception as e:
+        logger.error(f"Erro ao buscar na tabela {tabela}: {e}")
+        return {}
+
+def atualizar_registro_db(nome_aba: str, coluna_chave: str, valor_chave: any, dados_atualizacao: dict) -> None:
+    """
+    Atualiza um ou mais campos de um registo específico na base de dados PostgreSQL.
+    Ex: atualizar_registro_db("FaturasPagas", "cartao", "Nubank", {"ultimo_ciclo_pago": "01/06/2026"})
+    """
+    tabela = TABELAS_MAP.get(nome_aba, nome_aba)
+    if not tabela:
+        logger.error(f"Tabela não mapeada para a aba: {nome_aba}")
+        return
+        
+    col_chave_norm = normalize_column_names([coluna_chave])[0]
+    
+    set_clauses = []
+    params = {"valor_chave": valor_chave}
+    
+    # Montar a query dinamicamente com as colunas normalizadas (snake_case)
+    for key, value in dados_atualizacao.items():
+        col_norm = normalize_column_names([key])[0]
+        param_name = f"val_{col_norm}"
+        set_clauses.append(f"{col_norm} = :{param_name}")
+        params[param_name] = value
+        
+    set_query = ", ".join(set_clauses)
+    query = text(f"UPDATE {tabela} SET {set_query} WHERE {col_chave_norm} = :valor_chave")
+    
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(query, params)
+            logger.info(f"DB -> Tabela '{tabela}': {result.rowcount} registo(s) atualizado(s).")
+    except Exception as e:
+        logger.error(f"Erro ao atualizar {tabela} no PostgreSQL: {e}")

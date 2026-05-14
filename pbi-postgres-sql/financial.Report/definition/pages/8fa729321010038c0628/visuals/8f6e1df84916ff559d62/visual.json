@@ -45,41 +45,6 @@
             },
             {
               "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "WishlistCssBuy"
-                    }
-                  },
-                  "Property": "preco"
-                }
-              },
-              "queryRef": "WishlistCssBuy.preco",
-              "nativeQueryRef": "Preço ¥",
-              "displayName": "Preço ¥"
-            },
-            {
-              "field": {
-                "Aggregation": {
-                  "Expression": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Entity": "WishlistCssBuy"
-                        }
-                      },
-                      "Property": "Preço R$"
-                    }
-                  },
-                  "Function": 0
-                }
-              },
-              "queryRef": "Sum(WishlistCssBuy.Preço R$)",
-              "nativeQueryRef": "Preço BRL",
-              "displayName": "Preço BRL"
-            },
-            {
-              "field": {
                 "Aggregation": {
                   "Expression": {
                     "Column": {

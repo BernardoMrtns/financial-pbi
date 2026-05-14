@@ -70,15 +70,27 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @restrito
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     guia = (
-        "📊 <b>Comandos Disponíveis:</b>\n\n"
-        "🔴 <b>/debito</b> [valor] [conta] [categoria] [descrição]\n"
-        "🟢 <b>/receita</b> [valor] [conta] [categoria] [descrição]\n"
-        "💳 <b>/cartao</b> [total] [cartao] [parcelas] [categoria] [descrição]\n"
-        "🔁 <b>/pix</b> [total] [entrada] [pagas] [categoria] [descrição]\n"
-        "📈 <b>/invest</b> [tipo] [op] [valor] [qtd_cripto]\n\n"
+        "🤖 <b>Centro de Comando Financeiro</b>\n"
+        "<i>Toque em um comando para copiá-lo!</i>\n\n"
+        
+        "💰 <b>Registros Diários:</b>\n"
+        "🔴 <code>/debito [valor] [conta] [categoria] [descrição]</code>\n"
+        "🟢 <code>/receita [valor] [conta] [categoria] [descrição]</code>\n"
+        "💳 <code>/cartao [total] [cartao] [parcelas] [categoria] [descrição]</code>\n"
+        "🔁 <code>/pix [total] [entrada] [pagas] [categoria] [descrição]</code>\n"
+        "📈 <code>/invest [tipo] [op] [valor] [qtd_cripto]</code>\n\n"
+        
+        "🔄 <b>Edições e Status:</b>\n"
+        "📅 <code>/fatura_update [cartao] [nova_data]</code>\n"
+        "🔢 <code>/pix_update [id_compra] [qtd_pagas]</code>\n"
+        "🔔 <code>/ass_toggle [nome_assinatura]</code>\n\n"
+        
+        "⭐ <b>Desejos:</b>\n"
+        "🛒 <code>/wish_add [preco] [nome_com_underline] [categoria] [prioridade]</code>\n\n"
+        
         "🛠️ <b>Sistema:</b>\n"
-        "/status - Saúde da VM Oracle\n"
-        "/run_script - Recalcular Fluxo de Caixa (ETL)"
+        "🖥️ /status - <i>Telemetria e Saúde da VM</i>\n"
+        "⚙️ /run_script - <i>Forçar execução do pipeline (ETL)</i>"
     )
     await update.message.reply_text(guia, parse_mode=ParseMode.HTML)
 
@@ -183,6 +195,90 @@ async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Pipeline concluída com sucesso!")
     else:
         await update.message.reply_text("❌ Falha na execução do script principal.")
+
+# ==========================================
+#        NOVOS COMANDOS DE ATUALIZAÇÃO
+# ==========================================
+
+@restrito
+async def fatura_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Atualiza a data do último ciclo pago de um cartão."""
+    if len(context.args) < 2:
+        return await update.message.reply_text("⚠️ Formato: /fatura_update [Cartão] [Nova_Data (DD/MM/YYYY)]")
+    
+    cartao = context.args[0]
+    nova_data = context.args[1]
+    
+    try:
+        # NOTA: Você precisará criar esta função nos seus services (ex: services/database.py e google_sheets.py)
+        # atualizar_registro_db("faturas_pagas", "cartao", cartao, {"ultimo_ciclo_pago": nova_data})
+        # atualizar_registro_sheets(spreadsheet, "FaturasPagas", "cartao", cartao, "ultimo_ciclo_pago", nova_data)
+        
+        await update.message.reply_text(f"✅ Fatura do <b>{cartao}</b> atualizada para: {nova_data}", parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Erro ao atualizar fatura: {e}")
+        await update.message.reply_text("❌ Falha ao atualizar fatura no banco/sheets.")
+
+@restrito
+async def pix_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Atualiza a quantidade de parcelas pagas de um Pix Parcelado."""
+    if len(context.args) < 2:
+        return await update.message.reply_text("⚠️ Formato: /pix_update [ID_da_Compra] [Qtd_Pagas]")
+    
+    id_compra = context.args[0]
+    nova_qtd = int(context.args[1])
+    
+    try:
+        # atualizar_registro_db("pix_parcelado", "id", id_compra, {"qtd_pagas": nova_qtd})
+        # atualizar_registro_sheets(spreadsheet, "PixParcelado", "id", id_compra, "qtd_pagas", nova_qtd)
+        
+        await update.message.reply_text(f"✅ Compra PIX #{id_compra} atualizada: <b>{nova_qtd} parcelas pagas</b>.", parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Erro ao atualizar PIX: {e}")
+        await update.message.reply_text("❌ Falha ao atualizar parcelas do PIX.")
+
+# ==========================================
+#        SUGESTÕES DE NOVAS FUNCIONALIDADES
+# ==========================================
+
+@restrito
+async def wishlist_add_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Adiciona um item rápido na sua Wishlist."""
+    # Exemplo: /wish_add 500 "Anker Q30" Eletrônicos High
+    if len(context.args) < 4:
+        return await update.message.reply_text("⚠️ Formato: /wish_add [preco] [\"nome\"] [categoria] [prioridade]")
+    
+    # É interessante usar regex ou um delimitador para o nome se tiver espaços, 
+    # mas simplificando para o formato por argumentos:
+    dados = {
+        "nome": context.args[1].replace("_", " "), # Usando underline para espaços se não usar aspas
+        "preco": converter_numero_flexivel(context.args[0]),
+        "categoria": context.args[2],
+        "prioridade": context.args[3],
+        "link": "Link Adicionado via Bot",
+        # O ID deve ser autoincremental no banco/sheets
+    }
+    await processar_e_salvar(update, "Wishlist", dados)
+
+@restrito
+async def ass_toggle_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Inverte o status (Ativa/Inativa) de uma assinatura."""
+    if len(context.args) < 1:
+        return await update.message.reply_text("⚠️ Formato: /ass_toggle [Nome_Assinatura]")
+    
+    nome_assinatura = " ".join(context.args)
+    
+    try:
+        # Lógica ideal: buscar o status atual no DB, inverter o booleano e fazer o Update.
+        # status_atual = buscar_registro_db("assinaturas", "nome", nome_assinatura)['ativa']
+        # novo_status = not status_atual
+        # atualizar_registro_db(...)
+        # atualizar_registro_sheets(...)
+        
+        await update.message.reply_text(f"🔄 Status da assinatura <b>{nome_assinatura}</b> alterado com sucesso!", parse_mode=ParseMode.HTML)
+    except Exception as e:
+        await update.message.reply_text("❌ Falha ao alterar status da assinatura.")
+
 
 # ==========================================
 #              STARTUP

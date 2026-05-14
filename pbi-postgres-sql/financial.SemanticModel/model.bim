@@ -6992,58 +6992,6 @@
                     }
                   }
                 ]
-              },
-              "wishlist_css_buy.preco": {
-                "Definition": {
-                  "Binding": {
-                    "ConceptualEntity": "WishlistCssBuy",
-                    "ConceptualProperty": "preco"
-                  }
-                },
-                "State": "Generated",
-                "Terms": [
-                  {
-                    "preco": {
-                      "State": "Generated"
-                    }
-                  },
-                  {
-                    "Preço ¥": {
-                      "Source": {
-                        "Agent": "PowerBI.VisualColumnRename",
-                        "Type": "External"
-                      },
-                      "State": "Suggested",
-                      "Weight": 0.9
-                    }
-                  }
-                ]
-              },
-              "wishlist_css_buy.preço_r": {
-                "Definition": {
-                  "Binding": {
-                    "ConceptualEntity": "WishlistCssBuy",
-                    "ConceptualProperty": "Preço R$"
-                  }
-                },
-                "State": "Generated",
-                "Terms": [
-                  {
-                    "preço r$": {
-                      "State": "Generated"
-                    }
-                  },
-                  {
-                    "preço r dollar": {
-                      "Source": {
-                        "Agent": "Thesaurus"
-                      },
-                      "State": "Suggested",
-                      "Type": "Noun",
-                      "Weight": 0.762
-                    }
-                  }
-                ]
               }
             },
             "Language": "en-US",
@@ -12948,7 +12896,7 @@
                 "value": "{\"currencyCulture\":\"pt-BR\"}"
               }
             ],
-            "expression": "SUM(Wishlist[Preço]) + SUM(WishlistCssBuy[Preço R$])",
+            "expression": "SUM(Wishlist[Preço]) + SUM(WishlistCssBuy[preco_brl])",
             "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
             "lineageTag": "d319b82d-83bc-4b1c-acb0-f149a91b70fa"
           },
@@ -14261,7 +14209,7 @@
           },
           {
             "name": "PBI_ResultType",
-            "value": "Exception"
+            "value": "Table"
           }
         ],
         "columns": [
@@ -14292,37 +14240,6 @@
             "summarizeBy": "none"
           },
           {
-            "name": "preco",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              }
-            ],
-            "dataType": "string",
-            "lineageTag": "0af2fceb-b868-4779-ab8d-c47ca0672976",
-            "sourceColumn": "preco",
-            "summarizeBy": "none"
-          },
-          {
-            "name": "Preço R$",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              },
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"currencyCulture\":\"pt-BR\"}"
-              }
-            ],
-            "dataType": "decimal",
-            "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
-            "lineageTag": "0f40c400-def7-4d44-8ef4-d89e7ed4e948",
-            "sourceColumn": "Preço R$",
-            "summarizeBy": "sum"
-          },
-          {
             "name": "peso_aproximado",
             "annotations": [
               {
@@ -14351,6 +14268,41 @@
             "lineageTag": "47aa3dee-e92b-49e7-a3ec-55c2337cad7e",
             "sourceColumn": "Links",
             "summarizeBy": "none"
+          },
+          {
+            "name": "preco_yuan",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "decimal",
+            "lineageTag": "f42625f9-9671-4efb-ac86-5f3fbfb43a5b",
+            "sourceColumn": "preco_yuan",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "preco_brl",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "dataType": "decimal",
+            "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
+            "lineageTag": "35fc38a7-7e34-4f6c-b15d-7ce42f14b9cd",
+            "sourceColumn": "preco_brl",
+            "summarizeBy": "sum"
           }
         ],
         "lineageTag": "ab88419d-a632-47d8-a3f9-f7db89df6fbc",
@@ -14362,17 +14314,28 @@
               "expression": [
                 "let",
                 "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
-                "    Table = Source{[Schema=\"public\",Item=\"wishlist_cssbuy\"]}[Data],",
-                "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
-                "    Renamed = Table.RenameColumns(Cleaned,{",
-                "        {\"item\", \"Item\"}, ",
-                "        {\"categoria\", \"Categoria\"}, ",
-                "        {\"preco_brl\", \"Preço R$\"}, ",
+                "    Table = Source{[Schema = \"public\", Item = \"wishlist_cssbuy\"]}[Data],",
+                "    Cleaned = Table.RemoveColumns(Table, {\"id\"}),",
+                "    Renamed = Table.RenameColumns(Cleaned, {",
+                "        {\"item\", \"Item\"},",
+                "        {\"categoria\", \"Categoria\"},",
                 "        {\"links\", \"Links\"}",
                 "    }),",
-                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Renamed,{{\"Item\", type text}, {\"Categoria\", type text}, {\"Preço R$\", Currency.Type}, {\"peso_aproximado\", type number}, {\"Links\", type text}})",
+                "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Renamed, {",
+                "        {\"Item\", type text},",
+                "        {\"Categoria\", type text},",
+                "        {\"peso_aproximado\", type number},",
+                "        {\"Links\", type text},",
+                "        {\"preco_yuan\", Currency.Type}",
+                "    }),",
+                "    #\"Personalização Adicionada\" = Table.AddColumn(",
+                "        #\"Tipo Alterado\",",
+                "        \"preco_brl\",",
+                "        each [preco_yuan] / 1.28,",
+                "        Currency.Type",
+                "    )",
                 "in",
-                "    #\"Tipo Alterado\""
+                "    #\"Personalização Adicionada\""
               ],
               "type": "m"
             }
