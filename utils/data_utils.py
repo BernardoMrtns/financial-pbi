@@ -39,8 +39,16 @@ def converter_data_flexivel(series: pd.Series, preservar_hora: bool = False) -> 
     return result
 
 
-def converter_numero_flexivel(series: pd.Series) -> pd.Series:
-    s = series.astype(str).str.strip()
+def converter_numero_flexivel(valor: Any) -> Any:
+    """Converte números flexíveis, aceitando tanto pd.Series (ETL) quanto valores únicos (Telegram)."""
+    
+    # Verifica se é um valor único (string/float) ou uma coluna do Pandas
+    is_single_value = not isinstance(valor, pd.Series)
+    
+    # Se for valor único, embrulha numa Series temporária para reaproveitar a lógica
+    s = pd.Series([valor]) if is_single_value else valor.copy()
+
+    s = s.astype(str).str.strip()
     s = s.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
 
     mask_both = s.str.contains(r"\.") & s.str.contains(",")
@@ -49,8 +57,13 @@ def converter_numero_flexivel(series: pd.Series) -> pd.Series:
     mask_comma = s.str.contains(",") & ~s.str.contains(r"\.")
     s.loc[mask_comma] = s.loc[mask_comma].str.replace(",", ".", regex=False)
 
-    return pd.to_numeric(s, errors="coerce").fillna(0.0)
+    resultado = pd.to_numeric(s, errors="coerce").fillna(0.0)
 
+    # Se era um valor único do Bot, devolve um float puro (ex: 18.88). 
+    # Se era do ETL, devolve a coluna inteira do Pandas.
+    if is_single_value:
+        return float(resultado.iloc[0])
+    return resultado
 
 def normalizar_nome_cartao(cartao: str) -> str:
     return str(cartao).strip()
