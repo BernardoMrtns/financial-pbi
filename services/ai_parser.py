@@ -13,8 +13,11 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
     Extraia as informações da mensagem do usuário.
     Regras de Negócio OBRIGATÓRIAS:
     - tipo: "debito", "credito", "receita", "investimento", "pix" ou "wishlist".
-      * ATENÇÃO: Se a mensagem contiver "parcelado", "vezes", "parcelei" ou "cartão", OBRIGATORIAMENTE o tipo é "credito" (a menos que diga explicitamente "pix parcelado").
-      * Se falar "quero comprar", "vontade" ou "desejo", é "wishlist".
+      * HIERARQUIA 1 (Desejos): Se falar "quero", "vontade", "desejo" ou "wishlist", é OBRIGATORIAMENTE "wishlist".
+      * HIERARQUIA 2 (Entradas): Se indicar dinheiro ENTRANDO ("me pagou", "recebi", "salário", "vendi"), é OBRIGATORIAMENTE "receita", mesmo que mencione a palavra "pix".
+      * HIERARQUIA 3 (Crédito): Se contiver "parcelado", "vezes", "parcelei" ou "cartão", OBRIGATORIAMENTE é "credito" (exceto se for expressamente pix parcelado).
+      * HIERARQUIA 4 (Pix Saída): Um PIX normal SAINDO da conta é OBRIGATORIAMENTE "debito".
+      * HIERARQUIA 5 (Padrão): Compras comuns à vista são "debito".
     - valor: extraia o número principal ou valor total da compra (ex: 19.90, 50, 120).
     - conta_cartao: Opções (Inter, Nubank, MercadoPago). Se não informada, use "Inter".
     - categoria: Opções (Comida, iFood, Lazer, Vestuário, Utilidades, Presentes, Eletrônicos, Assinaturas, Saúde, Outros).
@@ -61,7 +64,7 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
     
     try:
         resposta = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.5-flash-lite',
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
