@@ -146,6 +146,17 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "QuantidadeCripto": dados_ia.get("quantidade_cripto", 0.0)
             }
             aba_destino = "Investimentos"
+        
+        elif tipo_transacao == "pix":
+            dados_finais = {
+                "Data": data_atual,
+                "ValorTotal": dados_ia["valor"],
+                "ValorEntrada": dados_ia.get("valor_entrada", 0.0),
+                "QtdPagas": dados_ia.get("qtd_pagas", 1),
+                "Categoria": dados_ia["categoria"],
+                "Descricao": dados_ia["descricao"]
+            }
+            aba_destino = "PixParcelado"
             
         else: # Padrão: Débito Avulso
             dados_finais = {
