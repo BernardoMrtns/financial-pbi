@@ -113,8 +113,13 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         tipo_transacao = dados_ia.get("tipo", "debito").lower()
         data_atual = datetime.now().strftime("%Y-%m-%d")
+
+        if tipo_transacao == "invalido":
+            await status_msg.edit_text("❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸")
+            return
         
-        # ROTEADOR DE ABAS E COLUNAS
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
+        
         if tipo_transacao == "credito":
             dados_finais = {
                 "Data": data_atual,
