@@ -46,7 +46,7 @@ async def processar_e_salvar(update: Update, aba: str, dados: dict):
         adicionar_linha_aba(spreadsheet, aba, df)
         adicionar_linha_db(aba, df)
         
-        valor_display = dados.get('Valor', dados.get('ValorTotal', 0))
+        valor_display = dados.get('Valor', dados.get('ValorTotal', dados.get('Preço', 0)))
         await update.message.reply_text(
             f"✅ <b>{aba}</b> atualizada!\n💰 Montante: R$ {valor_display}", 
             parse_mode=ParseMode.HTML
@@ -157,6 +157,16 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "Descricao": dados_ia["descricao"]
             }
             aba_destino = "PixParcelado"
+            
+        elif tipo_transacao == "wishlist":
+            dados_finais = {
+                "Nome": dados_ia["descricao"],
+                "Preço": dados_ia["valor"],
+                "Categoria": dados_ia["categoria"],
+                "Prioridade": dados_ia.get("prioridade", "Mid"),
+                "Link": "Adicionado via Bot"
+            }
+            aba_destino = "Wishlist"
             
         else: # Padrão: Débito Avulso
             dados_finais = {

@@ -33,7 +33,8 @@ def normalize_column_names(columns):
     MAPA_MANUAL = {
         'valor_c_d_i': 'valor_cdi',
         'saldo_b_t_c': 'saldo_btc',
-        'preco_b_t_c': 'preco_btc'
+        'preco_b_t_c': 'preco_btc',
+        'pre_o': 'preco'  # <--- Nova linha adicionada!
     }
     
     normalized = []
