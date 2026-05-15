@@ -115,7 +115,16 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         data_atual = datetime.now().strftime("%Y-%m-%d")
 
         if tipo_transacao == "invalido":
-            await status_msg.edit_text("❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸")
+            try:
+                await context.bot.delete_message(
+                    chat_id=update.effective_chat.id, 
+                    message_id=status_msg.message_id
+                )
+            except Exception:
+                pass #
+            
+            await update.message.reply_text("❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸")
+            
             return
         
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
