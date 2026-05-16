@@ -24,8 +24,9 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
     
     Preenchimento dos Campos OBRIGATÓRIOS:
     - valor: Número. (Se for "invalido", use 0.0).
-    - conta_cartao: (Inter, Nubank, MercadoPago). (Se for "invalido", use "N/A").
-    - categoria: (Comida, Lazer, Vestuário, Utilidades, Presentes, Eletrônicos, Assinaturas, Saúde, Outros). (Se "invalido", use "Outros").
+    - conta_cartao: (Inter, Nubank, MercadoPago, PicPay, AmazonPrime). (Por padrão, use "Inter").
+    - categoria: (Vestuário, Comida, iFood, Lazer, Saúde, Presentes, Utilidades, Eletrônicos, Moradia, Transporte, Educação, Assinaturas, Viagem, Bebidas, Outros). (Se "invalido", use "Outros").
+      * DICA PARA CATEGORIAS: Marcas de moda (Zara, Shein, etc.), sapatos e peças de roupa (mesmo com erro de digitação, como "calca" ou "tenis") são OBRIGATORIAMENTE "Vestuário".
     - descricao: Resumo em Title Case. (Se "invalido", use "Injeção Bloqueada").
     - parcelas: Inteiro. (Se "invalido", use 1).
     

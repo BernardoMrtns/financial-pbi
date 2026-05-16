@@ -109,26 +109,24 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     dados_ia = interpretar_gasto_com_ia(update.message.text)
     
     if dados_ia:
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
+        # 1. Tenta apagar a mensagem de status UMA ÚNICA VEZ com segurança
+        try:
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id, 
+                message_id=status_msg.message_id
+            )
+        except Exception:
+            pass
         
         tipo_transacao = dados_ia.get("tipo", "debito").lower()
         data_atual = datetime.now().strftime("%Y-%m-%d")
 
+        # 2. Barreira de Fogo
         if tipo_transacao == "invalido":
-            try:
-                await context.bot.delete_message(
-                    chat_id=update.effective_chat.id, 
-                    message_id=status_msg.message_id
-                )
-            except Exception:
-                pass #
-            
             await update.message.reply_text("❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸")
-            
             return
         
-        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
-        
+        # 3. ROTEADOR DE ABAS E COLUNAS
         if tipo_transacao == "credito":
             dados_finais = {
                 "Data": data_atual,
@@ -151,7 +149,6 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
             aba_destino = "Receitas"
             
         elif tipo_transacao == "investimento":
-            # Repare que Investimentos usa DataHora em vez de Data
             dados_finais = {
                 "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "Tipo": dados_ia["tipo_investimento"].upper(),
@@ -194,8 +191,7 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         await processar_e_salvar(update, aba_destino, dados_finais)
     else:
-        await status_msg.edit_text("❌ Não consegui entender os dados. Tente ser mais claro.")      
-        
+        await status_msg.edit_text("❌ Não consegui entender os dados. Tente ser mais claro.")        
 # ==========================================
 #         COMANDOS MANUAIS (BACKUP/GERAL)
 # ==========================================
