@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
-  "name": "aeb9b105a4ea08dcc05c",
+  "name": "09e583fc2ffa7be6d1bb",
   "position": {
-    "x": 0,
+    "x": 321.007556675063,
     "y": 0,
-    "z": 1000,
+    "z": 2002,
     "height": 303.7783375314861,
-    "width": 321.007556675063,
-    "tabOrder": 1000
+    "width": 320.10075566750629,
+    "tabOrder": 2002
   },
   "visual": {
     "visualType": "card",
@@ -23,12 +23,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "SaldoMes"
+                  "Property": "Último Insight IA"
                 }
               },
-              "queryRef": "_Measures.SaldodoMês",
-              "nativeQueryRef": "Saldo Do Mês",
-              "displayName": "Saldo Do Mês"
+              "queryRef": "_Measures.Último Insight IA",
+              "nativeQueryRef": "Último Insight IA"
             }
           ]
         }
@@ -78,6 +77,34 @@
                   }
                 }
               }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "15D"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "italic": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "underline": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
             }
           }
         }
@@ -98,6 +125,13 @@
                       "Property": "CorSaldoMes"
                     }
                   }
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
                 }
               }
             }

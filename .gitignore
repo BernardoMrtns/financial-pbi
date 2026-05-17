@@ -9,3 +9,4 @@ financial.SemanticModel/.pbi/cache.abf
 financial.SemanticModel/.pbi/localSettings.json
 financial.SemanticModel/diagramLayout.json
 logs/financial-pbi.log
+logs/
