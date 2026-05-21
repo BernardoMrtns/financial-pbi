@@ -1,5 +1,7 @@
+import html
 import os
 import subprocess
+import sys
 from datetime import datetime
 from functools import wraps
 
@@ -266,12 +268,26 @@ async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restrito
 async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    projeto_root = os.path.dirname(os.path.abspath(__file__))
+    main_script = os.path.join(projeto_root, "main.py")
+
     await update.message.reply_text("🔄 Executando motor ETL... Aguarde.")
-    res = subprocess.run(["python3", "main.py"], capture_output=True, text=True)
+    res = subprocess.run(
+        [sys.executable, main_script],
+        cwd=projeto_root,
+        capture_output=True,
+        text=True,
+    )
     if res.returncode == 0:
         await update.message.reply_text("✅ Pipeline concluída com sucesso!")
     else:
-        await update.message.reply_text("❌ Falha na execução do script principal.")
+        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
+        detalhe_erro = html.escape((res.stderr or res.stdout or "Erro desconhecido").strip())
+        await update.message.reply_text(
+            "❌ Falha na execução do script principal.\n"
+            f"<pre>{detalhe_erro[:1500]}</pre>",
+            parse_mode=ParseMode.HTML,
+        )
 
 # ==========================================
 #         COMANDOS DE EDIÇÃO (UPDATE)
