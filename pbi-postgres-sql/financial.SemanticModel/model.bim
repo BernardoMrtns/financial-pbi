@@ -13582,7 +13582,7 @@
             "source": {
               "expression": [
                 "let",
-                "    Fonte = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText(\"i45Wcs7PzUxJVNJRMjY1UIrViVYKTjy8KyUVKGAIFch0y89PAfGNIHyfxKrUIhDfAMIPSy0uKT28sCgzHyhoARELKEotTs0rSS0GCkGNCS3JzAHalIIs5lhcnJmXWFJalFiM0Ouak1pSdHhLXmZyPkjUCGqtZ14Z0KLMXKCx+RDbQfbHAgA=\", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Categoria = _t, Limite = _t]),",
+                "    Fonte = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText(\"TY+xagMxDIbfxfMNubSlWZOSQiClhSZdjhuUswiCO6vIvg55m5AhL5Cpq18scm3ojd8nof9X05gXHsiCqczDbGbaqjGfEH8tqqiLoFdmq7zIuIUTShrPM3+hD2M8C7HKp+w+BD26gF7VY1b7QL0G2T9X1pbek4MwCkzkuscg8eao42TrojfuR4No0LOc07N/YwFL6YHMOwHnv1lCeuG5nLRjB/EaLzztTXDE4b/gCg/aL0WWhfcxSK6g3N4B\", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Categoria = _t, Limite = _t]),",
                 "    #\"Tipo Alterado\" = Table.TransformColumnTypes(Fonte,{{\"Categoria\", type text}, {\"Limite\", Currency.Type}})",
                 "in",
                 "    #\"Tipo Alterado\""
