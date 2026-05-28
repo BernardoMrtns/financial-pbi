@@ -17,7 +17,9 @@ RENOMEIOS_DB_PARA_MEMORIA = {
     'valor_entrada': 'ValorEntrada', 'qtd_pagas': 'QtdPagas',
     'conta_destino': 'ContaDestino', 'conta_saida': 'ContaSaida',
     'data_hora': 'DataHora', 'operacao': 'Operacao', 'tipo': 'Tipo',
-    'preco': 'Preco', 'ultimo_ciclo_pago': 'UltimoCicloPago'
+    'preco': 'Preco', 'ultimo_ciclo_pago': 'UltimoCicloPago',
+    'quantidade': 'Quantidade',
+    'quantidade_cripto': 'QuantidadeCripto'
 }
 
 class DataLoader:
