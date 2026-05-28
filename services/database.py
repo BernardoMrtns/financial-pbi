@@ -64,7 +64,7 @@ def adicionar_linha_db(nome_aba: str, df: pd.DataFrame) -> None:
         logger.error(f"Erro ao salvar no PostgreSQL (tabela {tabela}): {e}")
 
 def atualizar_tabela_completa(nome_aba: str, df: pd.DataFrame) -> None:
-    """Sobrescreve completamente os dados da tabela, mantendo a estrutura original."""
+    """Sobrescreve completamente os dados da tabela, mantendo a estrutura original e resetando o ID."""
     tabela = TABELAS_MAP.get(nome_aba)
     if not tabela:
         logger.error(f"Tabela no PostgreSQL não mapeada para a aba: {nome_aba}")
@@ -74,18 +74,20 @@ def atualizar_tabela_completa(nome_aba: str, df: pd.DataFrame) -> None:
         df_db = df.copy()
         df_db.columns = normalize_column_names(df_db.columns)
 
-        # A MÁGICA DE ENGENHARIA DE DADOS:
-        # Em vez de apagar a tabela ('replace'), nós limpamos as linhas (DELETE) e colamos as novas.
-        # Isso preserva a sua coluna 'id' (Primary Key) e mantém o cadeado do pgAdmin destrancado!
         with engine.begin() as conn:
             try:
-                conn.execute(text(f"DELETE FROM {tabela};"))
+                # A MÁGICA ATUALIZADA:
+                # TRUNCATE esvazia a tabela instantaneamente.
+                # RESTART IDENTITY garante que a coluna 'id' volte para 1.
+                # CASCADE garante que limpe mesmo se houver dependências (opcional, mas seguro em data warehouses).
+                conn.execute(text(f"TRUNCATE TABLE {tabela} RESTART IDENTITY CASCADE;"))
             except Exception as e:
-                # Se a tabela ainda não existir, o banco avisa, nós ignoramos e deixamos o Pandas criá-la.
+                # Se a tabela ainda não existir, o banco avisa, nós ignoramos e deixamos o Pandas criá-la na primeira vez.
                 pass
 
+        # Insere os dados novos (agora com o ID recomeçando do 1)
         df_db.to_sql(tabela, engine, if_exists='append', index=False)
-        logger.info(f"Tabela '{tabela}' atualizada com sucesso (delete & append).")
+        logger.info(f"Tabela '{tabela}' atualizada com sucesso (TRUNCATE & append).")
     except Exception as e:
         logger.error(f"Erro ao atualizar tabela '{tabela}' no PostgreSQL: {e}")
 
@@ -139,3 +141,19 @@ def atualizar_registro_db(nome_aba: str, coluna_chave: str, valor_chave: any, da
             logger.info(f"DB -> Tabela '{tabela}': {result.rowcount} registo(s) atualizado(s).")
     except Exception as e:
         logger.error(f"Erro ao atualizar {tabela} no PostgreSQL: {e}")
+
+def ler_tabela_db(nome_aba: str) -> pd.DataFrame:
+    """Lê uma tabela inteira do PostgreSQL e retorna como DataFrame."""
+    tabela = TABELAS_MAP.get(nome_aba)
+    if not tabela:
+        logger.error(f"Tabela no PostgreSQL não mapeada para a aba: {nome_aba}")
+        return pd.DataFrame()
+        
+    try:
+        # Lê a tabela diretamente usando o pandas e a engine do SQLAlchemy
+        with engine.connect() as conn:
+            df = pd.read_sql_table(tabela, conn)
+        return df
+    except Exception as e:
+        logger.error(f"Erro ao ler tabela '{tabela}' do PostgreSQL: {e}")
+        return pd.DataFrame()

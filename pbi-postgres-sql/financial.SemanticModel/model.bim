@@ -13313,6 +13313,20 @@
             "lineageTag": "54c7479f-7486-4208-99c5-2cfb3704f57d",
             "sourceColumn": "ValorFluxo",
             "summarizeBy": "sum"
+          },
+          {
+            "name": "id",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "int64",
+            "formatString": "0",
+            "lineageTag": "b679ea11-510f-4ad6-828f-575a0becd237",
+            "sourceColumn": "id",
+            "summarizeBy": "sum"
           }
         ],
         "lineageTag": "ff5324d3-a937-42c3-9937-cbfb28dbb7a2",

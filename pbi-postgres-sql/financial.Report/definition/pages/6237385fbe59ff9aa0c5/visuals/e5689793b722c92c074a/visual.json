@@ -98,32 +98,6 @@
               }
             },
             "direction": "Ascending"
-          },
-          {
-            "field": {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Entity": "FluxoCaixaCompleto"
-                  }
-                },
-                "Property": "Conta_Cartao"
-              }
-            },
-            "direction": "Ascending"
-          },
-          {
-            "field": {
-              "Column": {
-                "Expression": {
-                  "SourceRef": {
-                    "Entity": "FluxoCaixaCompleto"
-                  }
-                },
-                "Property": "Descricao"
-              }
-            },
-            "direction": "Ascending"
           }
         ]
       }
