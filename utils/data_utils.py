@@ -74,10 +74,28 @@ def calcular_mes_competencia(data_compra: pd.Timestamp, cartao: str = "") -> pd.
         return pd.NaT
 
     dia_vencimento = VENCIMENTO_CARTOES.get(normalizar_nome_cartao(cartao), 8)
-    if data_compra.day <= dia_vencimento:
-        return data_compra.to_period("M").to_timestamp()
-    return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()
+    
 
+    dias_fechamento = 10 
+    
+    try:
+        vencimento_este_mes = data_compra.replace(day=dia_vencimento)
+    except ValueError:
+        vencimento_este_mes = (data_compra + pd.offsets.MonthEnd(0)).replace(day=dia_vencimento)
+
+    fechamento_este_mes = vencimento_este_mes - pd.Timedelta(days=dias_fechamento)
+    
+    if data_compra <= fechamento_este_mes:
+        return vencimento_este_mes.to_period("M").to_timestamp()
+    
+    vencimento_proximo_mes = vencimento_este_mes + DateOffset(months=1)
+    fechamento_proximo_mes = vencimento_proximo_mes - pd.Timedelta(days=dias_fechamento)
+    
+    if data_compra <= fechamento_proximo_mes:
+        return vencimento_proximo_mes.to_period("M").to_timestamp()
+        
+    vencimento_dois_meses = vencimento_este_mes + DateOffset(months=2)
+    return vencimento_dois_meses.to_period("M").to_timestamp()
 
 def obter_cdi_historico(data_inicio: pd.Timestamp) -> pd.DataFrame:
     try:
