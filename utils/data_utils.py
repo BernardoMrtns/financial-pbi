@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from typing import Any
 
 import pandas as pd
@@ -7,7 +8,7 @@ import requests
 from pandas.tseries.offsets import DateOffset
 from requests import RequestException
 
-from config import BACEN_CDI_SERIE_URL, REQUEST_TIMEOUT_SECONDS, VENCIMENTO_CARTOES
+from config import BACEN_CDI_SERIE_URL, REQUEST_TIMEOUT_SECONDS, VENCIMENTO_CARTOES, DIAS_FECHAMENTO_CARTOES
 from utils.logging_config import get_logger
 from utils.retry import retry_call
 
@@ -65,6 +66,7 @@ def converter_numero_flexivel(valor: Any) -> Any:
         return float(resultado.iloc[0])
     return resultado
 
+
 def normalizar_nome_cartao(cartao: str) -> str:
     return str(cartao).strip()
 
@@ -73,10 +75,39 @@ def calcular_mes_competencia(data_compra: pd.Timestamp, cartao: str = "") -> pd.
     if pd.isna(data_compra):
         return pd.NaT
 
-    dia_vencimento = VENCIMENTO_CARTOES.get(normalizar_nome_cartao(cartao), 8)
-    if data_compra.day <= dia_vencimento:
-        return data_compra.to_period("M").to_timestamp()
-    return (data_compra + DateOffset(months=1)).to_period("M").to_timestamp()
+    nome_cartao = normalizar_nome_cartao(cartao)
+    dia_vencimento = VENCIMENTO_CARTOES.get(nome_cartao, 8)
+
+    
+    nome_upper = str(nome_cartao).upper().replace(" ", "")
+    dias_gap = next((gap for banco, gap in DIAS_FECHAMENTO_CARTOES.items() if banco in nome_upper), 8)
+
+    # 1. Identifica o mês base inicial
+    if data_compra.day > dia_vencimento:
+        mes_base = data_compra + pd.DateOffset(months=1)
+    else:
+        mes_base = data_compra
+        
+    # 2. Lógica IMPENETRÁVEL para garantir dias válidos no mês (Trata Fev e meses de 30 dias perfeitamente)
+    _, ultimo_dia_mes = calendar.monthrange(mes_base.year, mes_base.month)
+    dia_valido = min(dia_vencimento, ultimo_dia_mes)
+    data_vencimento_base = pd.Timestamp(year=mes_base.year, month=mes_base.month, day=dia_valido)
+        
+    # 3. Calcula quando a fatura fecha e o "melhor dia"
+    data_fechamento_base = data_vencimento_base - pd.Timedelta(days=dias_gap)
+    
+    # 4. Avaliação final com operador estrito
+    if data_compra < data_fechamento_base:
+        return data_vencimento_base.to_period("M").to_timestamp()
+    else:
+        # Pula para o vencimento do mês seguinte (garantindo também que seja um dia válido)
+        mes_seguinte = data_vencimento_base + pd.DateOffset(months=1)
+        _, ultimo_dia_mes_seguinte = calendar.monthrange(mes_seguinte.year, mes_seguinte.month)
+        dia_valido_seguinte = min(dia_vencimento, ultimo_dia_mes_seguinte)
+        
+        resultado_final = pd.Timestamp(year=mes_seguinte.year, month=mes_seguinte.month, day=dia_valido_seguinte)
+        return resultado_final.to_period("M").to_timestamp()
+
 
 def obter_cdi_historico(data_inicio: pd.Timestamp) -> pd.DataFrame:
     try:
