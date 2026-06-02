@@ -13061,6 +13061,69 @@
               ")"
             ],
             "lineageTag": "78bacf3d-7838-4f57-a260-779d5ae0b1bd"
+          },
+          {
+            "name": "Aportes Brutos",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    SUM(Investimentos[Valor]),",
+              "    Investimentos[Operacao] = \"Aporte\"",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "ad800822-68a9-49ac-9779-9d8d014b5e01"
+          },
+          {
+            "name": "Saques Brutos",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    SUM(Investimentos[Valor]),",
+              "    Investimentos[Operacao] = \"Saque\"",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "1ef9a866-1668-43c7-a74e-9a2df4427dd7"
+          },
+          {
+            "name": "Aportes Liquidos",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "[Aportes Brutos] - [Saques Brutos]"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "6d2fdf8c-9ff2-48ad-9c6e-c3d96d36e979"
+          },
+          {
+            "name": "Cor Apoorte",
+            "expression": [
+              "",
+              "IF(",
+              "    [PatrimônioTotal] < [Aportes Liquidos],",
+              "    \"#D9534F\", -- vermelho mais clean",
+              "    \"#5CB85C\"  -- verde mais clean",
+              ")"
+            ],
+            "lineageTag": "89e2950e-2576-43d4-b226-b2bb1f8ccba3"
           }
         ],
         "partitions": [
