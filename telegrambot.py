@@ -45,7 +45,6 @@ async def processar_e_salvar(update: Update, aba: str, dados: dict):
             colunas_corretas = SCHEMA_ABAS[aba]
             df = df[colunas_corretas]
         
-        adicionar_linha_aba(spreadsheet, aba, df)
         adicionar_linha_db(aba, df)
         
         valor_display = dados.get('Valor', dados.get('ValorTotal', dados.get('Preço', 0)))

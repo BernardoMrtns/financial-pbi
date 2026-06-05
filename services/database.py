@@ -62,6 +62,7 @@ def adicionar_linha_db(nome_aba: str, df: pd.DataFrame) -> None:
         logger.info(f"Linha adicionada com sucesso no PostgreSQL -> tabela '{tabela}'")
     except Exception as e:
         logger.error(f"Erro ao salvar no PostgreSQL (tabela {tabela}): {e}")
+        raise e
 
 def atualizar_tabela_completa(nome_aba: str, df: pd.DataFrame) -> None:
     """Sobrescreve completamente os dados da tabela, mantendo a estrutura original e resetando o ID."""
