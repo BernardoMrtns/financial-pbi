@@ -130,7 +130,7 @@ class FluxoCaixaProcessor:
     def processar_assinaturas(self) -> None:
         df_assin = self.dados["assinaturas"]
         hoje = pd.Timestamp.today().normalize()
-        fim_projecao = (hoje + DateOffset(months=6)).to_period("M").to_timestamp()
+        fim_projecao = (hoje + DateOffset(months=3)).to_period("M").to_timestamp()
 
         for r in df_assin.itertuples():
             ativa = getattr(r, "Ativa", False) is True or str(getattr(r, "Ativa", "")).upper() == "TRUE"
@@ -148,7 +148,13 @@ class FluxoCaixaProcessor:
 
             try:
                 datas = pd.date_range(start=inicio, end=fim, freq="MS")
-                dia_orig = inicio.day
+                
+                # Tenta pegar a coluna dia_cobranca, senão faz fallback para inicio.day
+                if hasattr(r, "dia_cobranca") and pd.notna(r.dia_cobranca) and r.dia_cobranca != "":
+                    dia_orig = int(r.dia_cobranca)
+                else:
+                    dia_orig = inicio.day
+                    
                 datas_ajustadas: list[pd.Timestamp] = []
 
                 for d in datas:
