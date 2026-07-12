@@ -28,7 +28,7 @@ from ui.constants import (
     PRIORIDADES,
 )
 from ui.storage import gravar_e_confirmar
-from ui.views import FaturaEditView, PainelView, PixEditView, painel_embed
+from ui.views import FaturaEditView, PainelView, PixEditView, painel_embed, registrar_acao_painel
 from utils.data_utils import converter_numero_flexivel
 from utils.logging_config import get_logger
 
@@ -79,6 +79,11 @@ class FinancialBot(commands.Bot):
     async def setup_hook(self):
         # Registra a View persistente para que os botoes do painel sobrevivam a reinicios.
         self.add_view(PainelView())
+        registrar_acao_painel("fatura", _abrir_fatura_menu)
+        registrar_acao_painel("pix_editar", _abrir_pix_menu)
+        registrar_acao_painel("status", _enviar_status)
+        registrar_acao_painel("run_script", _executar_pipeline)
+        registrar_acao_painel("clear", _limpar_dm_chat)
         await self.tree.sync()
         logger.info("UI sincronizada e painel persistente registrado.")
 
@@ -110,6 +115,102 @@ async def on_ready():
     logger.info("A ligar ao ecossistema Google...")
     spreadsheet = conectar_google_sheets()
     logger.info("Bot logado como %s!", bot.user)
+
+
+async def _abrir_fatura_menu(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "💳 Selecione o cartão para atualizar a fatura:",
+        view=FaturaEditView(_confirmar_fatura),
+        ephemeral=True,
+    )
+
+
+async def _abrir_pix_menu(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    df = ler_tabela_db("PixParcelado")
+    if df.empty:
+        await interaction.followup.send("📭 Nenhuma compra PIX encontrada.", ephemeral=True)
+        return
+
+    compras = [
+        {
+            "id": row.get("id", idx),
+            "descricao": str(row.get("descricao", "—")),
+            "valor": row.get("valor_total", 0),
+            "pagas": row.get("qtd_pagas", 0),
+        }
+        for idx, row in df.tail(25).iterrows()
+    ]
+
+    await interaction.followup.send(
+        "🔁 Selecione a compra PIX para atualizar as parcelas pagas:",
+        view=PixEditView(compras, _confirmar_pix),
+        ephemeral=True,
+    )
+
+
+async def _enviar_status(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    try:
+        ram = subprocess.check_output(
+            "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
+        ).decode().strip()
+        disco = subprocess.check_output(
+            "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
+        ).decode().strip()
+        msg = f"🖥️ **Saúde do Servidor:**\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+        await interaction.followup.send(msg, ephemeral=True)
+    except Exception:
+        await interaction.followup.send("⚠️ Erro ao obter telemetria.", ephemeral=True)
+
+
+async def _executar_pipeline(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    projeto_root = os.path.dirname(os.path.abspath(__file__))
+    main_script = os.path.join(projeto_root, "main.py")
+
+    res = subprocess.run(
+        [sys.executable, main_script],
+        cwd=projeto_root,
+        capture_output=True,
+        text=True,
+    )
+    if res.returncode == 0:
+        await interaction.followup.send("✅ Pipeline de Fluxo de Caixa concluída com sucesso!", ephemeral=True)
+    else:
+        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
+        detalhe_erro = (res.stderr or res.stdout or "Erro desconhecido").strip()
+        await interaction.followup.send(
+            f"❌ Falha na execução do script principal.\n```\n{detalhe_erro[:1500]}\n```", ephemeral=True
+        )
+
+
+async def _limpar_dm_chat(interaction: discord.Interaction):
+    channel = interaction.channel
+    if not isinstance(channel, discord.DMChannel):
+        await interaction.response.send_message(
+            "⚠️ O comando /clear só funciona em conversa direta (DM).", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    apagadas = 0
+    async for mensagem in channel.history(limit=200):
+        if mensagem.author != bot.user:
+            continue
+        try:
+            await mensagem.delete()
+            apagadas += 1
+        except discord.HTTPException:
+            logger.warning("Nao foi possivel apagar uma mensagem do bot na DM.")
+
+    await interaction.followup.send(
+        f"🧹 Limpei {apagadas} mensagem(ns) minhas nesta DM.",
+        ephemeral=True,
+    )
 
 
 # ==========================================
@@ -300,6 +401,11 @@ async def ass_toggle_cmd(interaction: discord.Interaction, nome_assinatura: str)
     await interaction.followup.send(
         f"🔄 Comando recebido para assinatura: **{nome_assinatura}**", ephemeral=True
     )
+
+
+@bot.tree.command(name="clear", description="Limpa a conversa desta DM")
+async def clear_cmd(interaction: discord.Interaction):
+    await _limpar_dm_chat(interaction)
 
 
 # ==========================================

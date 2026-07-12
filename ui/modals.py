@@ -148,6 +148,57 @@ class PixModal(discord.ui.Modal, title="🔁 PIX Parcelado"):
         )
 
 
+class WishlistModal(discord.ui.Modal, title="⭐ Nova Wishlist"):
+    preco = discord.ui.TextInput(label="Preço", placeholder="Ex: 199,90", required=True)
+    nome = discord.ui.TextInput(label="Nome", placeholder="O que você quer?", required=True)
+    categoria = dropdown("Categoria", CATEGORIAS)
+    prioridade = dropdown("Prioridade", ["Baixa", "Media", "Alta"], padrao="Media")
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        dados = {
+            "Nome": str(self.nome.value).replace("_", " "),
+            "Preço": converter_numero_flexivel(str(self.preco.value)),
+            "Categoria": _sel(self.categoria, CATEGORIA_PADRAO),
+            "Prioridade": _sel(self.prioridade, "Media"),
+            "Link": "Adicionado via Bot",
+        }
+        await gravar_e_confirmar(
+            interaction, "Wishlist", dados, titulo="⭐ Item na Wishlist!", cor=COR_PIX
+        )
+
+
+class InvestModal(discord.ui.Modal, title="📈 Novo Investimento"):
+    tipo = discord.ui.TextInput(label="Tipo", placeholder="Ex: Renda Fixa, Cripto", required=True)
+    operacao = discord.ui.TextInput(label="Operação", placeholder="Aporte ou Saque", required=True)
+    valor = discord.ui.TextInput(label="Valor", placeholder="Ex: 1000", required=True)
+    qtd_cripto = discord.ui.TextInput(label="Quantidade cripto", placeholder="Ex: 0.01", default="0", required=False)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        dados = {
+            "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Tipo": str(self.tipo.value).upper(),
+            "Operacao": str(self.operacao.value),
+            "Valor": converter_numero_flexivel(str(self.valor.value)),
+            "QuantidadeCripto": converter_numero_flexivel(str(self.qtd_cripto.value or "0")),
+        }
+        await gravar_e_confirmar(
+            interaction, "Investimentos", dados, titulo="📈 Investimento registrado!", cor=COR_CARTAO
+        )
+
+
+class AssinaturaModal(discord.ui.Modal, title="🔔 Assinatura"):
+    nome_assinatura = discord.ui.TextInput(label="Nome da assinatura", placeholder="Ex: Netflix", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        await interaction.followup.send(
+            f"🔄 Comando recebido para assinatura: **{str(self.nome_assinatura.value).strip()}**",
+            ephemeral=True,
+        )
+
+
 class FaturaDataModal(discord.ui.Modal, title="💳 Atualizar Fatura"):
     """Aberto apos escolher o cartao no Select de edicao de fatura."""
 

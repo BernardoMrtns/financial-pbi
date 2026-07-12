@@ -23,9 +23,26 @@ from ui.modals import (
     PixModal,
     PixQtdModal,
     ReceitaModal,
+    AssinaturaModal,
+    InvestModal,
+    WishlistModal,
 )
 
 logger = get_logger(__name__)
+
+PanelAction = Callable[[discord.Interaction], Awaitable[None]]
+
+PANEL_ACTIONS: dict[str, PanelAction | None] = {
+    "fatura": None,
+    "pix_editar": None,
+    "status": None,
+    "run_script": None,
+    "clear": None,
+}
+
+
+def registrar_acao_painel(nome: str, acao: PanelAction | None) -> None:
+    PANEL_ACTIONS[nome] = acao
 
 
 class AuthorizedView(discord.ui.View):
@@ -70,6 +87,91 @@ class PainelView(AuthorizedView):
     )
     async def pix(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
         await interaction.response.send_modal(PixModal())
+
+    @discord.ui.button(
+        label="Wishlist", emoji="⭐", style=discord.ButtonStyle.success, custom_id="painel:wishlist"
+    )
+    async def wishlist(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        await interaction.response.send_modal(WishlistModal())
+
+    @discord.ui.button(
+        label="Investimento",
+        emoji="📈",
+        style=discord.ButtonStyle.primary,
+        custom_id="painel:invest",
+    )
+    async def investimento(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        await interaction.response.send_modal(InvestModal())
+
+    @discord.ui.button(
+        label="Fatura", emoji="💳", style=discord.ButtonStyle.secondary, custom_id="painel:fatura"
+    )
+    async def fatura(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("fatura")
+        if acao is None:
+            await interaction.response.send_message("⚠️ Ação de fatura ainda não configurada.", ephemeral=True)
+            return
+        await acao(interaction)
+
+    @discord.ui.button(
+        label="PIX Editar",
+        emoji="🔁",
+        style=discord.ButtonStyle.secondary,
+        custom_id="painel:pix_editar",
+    )
+    async def pix_editar(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("pix_editar")
+        if acao is None:
+            await interaction.response.send_message(
+                "⚠️ Ação de edição do PIX ainda não configurada.", ephemeral=True
+            )
+            return
+        await acao(interaction)
+
+    @discord.ui.button(
+        label="Assinatura",
+        emoji="🔔",
+        style=discord.ButtonStyle.secondary,
+        custom_id="painel:assinatura",
+    )
+    async def assinatura(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        await interaction.response.send_modal(AssinaturaModal())
+
+    @discord.ui.button(
+        label="Status", emoji="🖥️", style=discord.ButtonStyle.secondary, custom_id="painel:status"
+    )
+    async def status(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("status")
+        if acao is None:
+            await interaction.response.send_message("⚠️ Ação de status ainda não configurada.", ephemeral=True)
+            return
+        await acao(interaction)
+
+    @discord.ui.button(
+        label="Executar ETL",
+        emoji="⚙️",
+        style=discord.ButtonStyle.primary,
+        custom_id="painel:run_script",
+    )
+    async def run_script(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("run_script")
+        if acao is None:
+            await interaction.response.send_message("⚠️ Ação de ETL ainda não configurada.", ephemeral=True)
+            return
+        await acao(interaction)
+
+    @discord.ui.button(
+        label="Limpar DM",
+        emoji="🧹",
+        style=discord.ButtonStyle.danger,
+        custom_id="painel:clear",
+    )
+    async def clear(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("clear")
+        if acao is None:
+            await interaction.response.send_message("⚠️ Ação de limpeza ainda não configurada.", ephemeral=True)
+            return
+        await acao(interaction)
 
 
 def painel_embed() -> discord.Embed:
