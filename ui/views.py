@@ -173,6 +173,27 @@ class PainelView(AuthorizedView):
             return
         await acao(interaction)
 
+    @discord.ui.button(
+        label="Fechar",
+        emoji="✖️",
+        style=discord.ButtonStyle.danger,
+        custom_id="painel:fechar",
+    )
+    async def fechar(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        try:
+            await interaction.response.defer()
+            if interaction.message is not None:
+                await interaction.message.delete()
+        except discord.HTTPException:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "⚠️ Não foi possível fechar o painel.", ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "⚠️ Não foi possível fechar o painel.", ephemeral=True
+                )
+
 
 def painel_embed() -> discord.Embed:
     """Embed limpo que acompanha o painel principal."""
