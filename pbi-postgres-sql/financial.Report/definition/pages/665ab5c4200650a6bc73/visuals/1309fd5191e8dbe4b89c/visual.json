@@ -42,12 +42,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "TotalPorCategoria"
+                  "Property": "Total Consumo (Data Compra)"
                 }
               },
-              "queryRef": "_Measures.TotalPorCategoria",
-              "nativeQueryRef": "Total",
-              "displayName": "Total"
+              "queryRef": "_Measures.Total Consumo (Data Compra)",
+              "nativeQueryRef": "Total Consumo (Data Compra)"
             }
           ]
         }
@@ -62,12 +61,13 @@
                     "Entity": "_Measures"
                   }
                 },
-                "Property": "TotalPorCategoria"
+                "Property": "Total Consumo (Data Compra)"
               }
             },
             "direction": "Descending"
           }
-        ]
+        ],
+        "isDefaultSort": true
       }
     },
     "objects": {
@@ -279,65 +279,6 @@
         "howCreated": "User"
       },
       {
-        "name": "f5e16f1e131e55bba06a",
-        "field": {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "dCalendario"
-              }
-            },
-            "Property": "Date"
-          }
-        },
-        "type": "RelativeDate",
-        "filter": {
-          "Version": 2,
-          "From": [
-            {
-              "Name": "d",
-              "Entity": "dCalendario",
-              "Type": 0
-            }
-          ],
-          "Where": [
-            {
-              "Condition": {
-                "Comparison": {
-                  "ComparisonKind": 0,
-                  "Left": {
-                    "Column": {
-                      "Expression": {
-                        "SourceRef": {
-                          "Source": "d"
-                        }
-                      },
-                      "Property": "Date"
-                    }
-                  },
-                  "Right": {
-                    "DateSpan": {
-                      "Expression": {
-                        "Now": {}
-                      },
-                      "TimeUnit": 2
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        "howCreated": "User",
-        "objects": {
-          "general": [
-            {
-              "properties": {}
-            }
-          ]
-        }
-      },
-      {
         "name": "ca7fd4b11885c8e01045",
         "field": {
           "Column": {
@@ -408,6 +349,20 @@
             }
           ]
         }
+      },
+      {
+        "name": "46993bbe0f728151b2cd",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "Total Consumo (Data Compra)"
+          }
+        },
+        "type": "Advanced"
       }
     ]
   }
