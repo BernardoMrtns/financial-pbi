@@ -21,6 +21,7 @@ from ui.constants import (
     CARTOES,
     CATEGORIAS,
     CONTAS,
+    COR_ASSINATURA,
     COR_CARTAO,
     COR_DEBITO,
     COR_PIX,
@@ -28,7 +29,14 @@ from ui.constants import (
     PRIORIDADES,
 )
 from ui.storage import gravar_e_confirmar
-from ui.views import FaturaEditView, PainelView, PixEditView, painel_embed, registrar_acao_painel
+from ui.views import (
+    AssinaturaToggleView,
+    FaturaEditView,
+    PainelView,
+    PixEditView,
+    painel_embed,
+    registrar_acao_painel,
+)
 from utils.data_utils import converter_numero_flexivel
 from utils.logging_config import get_logger
 
@@ -81,6 +89,7 @@ class FinancialBot(commands.Bot):
         self.add_view(PainelView())
         registrar_acao_painel("fatura", _abrir_fatura_menu)
         registrar_acao_painel("pix_editar", _abrir_pix_menu)
+        registrar_acao_painel("assinatura_toggle", _abrir_assinatura_toggle_menu)
         registrar_acao_painel("status", _enviar_status)
         registrar_acao_painel("run_script", _executar_pipeline)
         registrar_acao_painel("clear", _limpar_dm_chat)
@@ -146,6 +155,44 @@ async def _abrir_pix_menu(interaction: discord.Interaction):
     await interaction.followup.send(
         "🔁 Selecione a compra PIX para atualizar as parcelas pagas:",
         view=PixEditView(compras, _confirmar_pix),
+        ephemeral=True,
+    )
+
+
+def _valor_verdadeiro(valor) -> bool:
+    """Interpreta o campo 'ativa' (booleano ou texto 'TRUE'/'FALSE') como bool."""
+    if isinstance(valor, bool):
+        return valor
+    return str(valor).strip().upper() in ("TRUE", "1", "SIM", "T", "VERDADEIRO")
+
+
+def _listar_assinaturas() -> list[dict]:
+    """Lê as assinaturas do banco no formato consumido por AssinaturaToggleView."""
+    df = ler_tabela_db("Assinaturas")
+    if df.empty:
+        return []
+    return [
+        {
+            "id": row.get("id", idx),
+            "nome": str(row.get("nome", "—")),
+            "valor": row.get("valor", 0),
+            "ativa": _valor_verdadeiro(row.get("ativa", False)),
+        }
+        for idx, row in df.tail(25).iterrows()
+    ]
+
+
+async def _abrir_assinatura_toggle_menu(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    assinaturas = _listar_assinaturas()
+    if not assinaturas:
+        await interaction.followup.send("📭 Nenhuma assinatura encontrada.", ephemeral=True)
+        return
+
+    await interaction.followup.send(
+        "🔄 Selecione a assinatura para ativar/desativar:",
+        view=AssinaturaToggleView(assinaturas, _confirmar_assinatura_toggle),
         ephemeral=True,
     )
 
@@ -395,11 +442,61 @@ async def pix_editar_cmd(interaction: discord.Interaction):
     )
 
 
-@bot.tree.command(name="ass_toggle", description="Alterna o status de uma assinatura")
-async def ass_toggle_cmd(interaction: discord.Interaction, nome_assinatura: str):
-    await interaction.response.defer(ephemeral=True, thinking=True)
+async def _confirmar_assinatura_toggle(
+    interaction: discord.Interaction, id_assinatura: str, nome: str, nova_ativa: bool
+):
+    novo_valor = "TRUE" if nova_ativa else "FALSE"
+    atualizar_registro_db("Assinaturas", "id", id_assinatura, {"ativa": novo_valor})
+    if spreadsheet is not None:
+        # No Sheets a chave é o nome e o cabeçalho segue o schema (capitalizado).
+        atualizar_registro_sheets(spreadsheet, "Assinaturas", "Nome", nome, {"Ativa": novo_valor})
+    estado = "🟢 ativada" if nova_ativa else "⚪ desativada"
     await interaction.followup.send(
-        f"🔄 Comando recebido para assinatura: **{nome_assinatura}**", ephemeral=True
+        f"✅ Assinatura **{nome}** {estado}.", ephemeral=True
+    )
+
+
+@bot.tree.command(name="assinatura", description="Cria uma nova assinatura recorrente")
+@app_commands.describe(
+    nome="Ex: Netflix",
+    valor="Valor mensal, ex: 39,90",
+    dia_cobranca="Dia do mês (1-31)",
+    categoria="Categoria",
+    cartao="Cartão de cobrança",
+)
+@app_commands.choices(categoria=CHOICES_CATEGORIA, cartao=CHOICES_CARTAO)
+async def assinatura_cmd(
+    interaction, nome: str, valor: str, dia_cobranca: int, categoria: str, cartao: str
+):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    dados = {
+        "Nome": nome.strip(),
+        "Categoria": categoria,
+        "Valor": converter_numero_flexivel(valor),
+        "DiaCobranca": min(31, max(1, dia_cobranca)),
+        "Cartao": cartao,
+        "Ativa": "TRUE",
+        "Inicio": datetime.now().strftime("%Y-%m-%d"),
+        "Fim": None,
+    }
+    await gravar_e_confirmar(
+        interaction, "Assinaturas", dados, titulo="🔔 Assinatura criada!", cor=COR_ASSINATURA
+    )
+
+
+@bot.tree.command(name="ass_toggle", description="Ativa/desativa uma assinatura existente")
+async def ass_toggle_cmd(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+
+    assinaturas = _listar_assinaturas()
+    if not assinaturas:
+        await interaction.followup.send("📭 Nenhuma assinatura encontrada.", ephemeral=True)
+        return
+
+    await interaction.followup.send(
+        "🔄 Selecione a assinatura para ativar/desativar:",
+        view=AssinaturaToggleView(assinaturas, _confirmar_assinatura_toggle),
+        ephemeral=True,
     )
 
 

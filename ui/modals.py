@@ -20,6 +20,7 @@ from ui.constants import (
     CATEGORIA_PADRAO,
     CONTAS,
     CONTA_PADRAO,
+    COR_ASSINATURA,
     COR_CARTAO,
     COR_DEBITO,
     COR_PIX,
@@ -188,14 +189,36 @@ class InvestModal(discord.ui.Modal, title="📈 Novo Investimento"):
         )
 
 
-class AssinaturaModal(discord.ui.Modal, title="🔔 Assinatura"):
-    nome_assinatura = discord.ui.TextInput(label="Nome da assinatura", placeholder="Ex: Netflix", required=True)
+class AssinaturaModal(discord.ui.Modal, title="🔔 Nova Assinatura"):
+    """Cria uma assinatura recorrente. Ja nasce ativa, iniciando hoje e sem data de fim
+    (o ETL projeta 3 meses adiante). Use o menu de edicao para pausar/encerrar depois."""
+
+    nome = discord.ui.TextInput(label="Nome da assinatura", placeholder="Ex: Netflix", required=True)
+    valor = discord.ui.TextInput(label="Valor mensal", placeholder="Ex: 39,90", required=True)
+    dia_cobranca = discord.ui.TextInput(
+        label="Dia da cobrança", placeholder="Dia do mês, ex: 15", required=True
+    )
+    categoria = dropdown("Categoria", CATEGORIAS, padrao="Assinaturas")
+    cartao = dropdown("Cartão", CARTOES, padrao=CARTOES[0])
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
-        await interaction.followup.send(
-            f"🔄 Comando recebido para assinatura: **{str(self.nome_assinatura.value).strip()}**",
-            ephemeral=True,
+        try:
+            dia = min(31, max(1, int(str(self.dia_cobranca.value).strip() or "1")))
+        except ValueError:
+            dia = 1
+        dados = {
+            "Nome": str(self.nome.value).strip(),
+            "Categoria": _sel(self.categoria, CATEGORIA_PADRAO),
+            "Valor": converter_numero_flexivel(str(self.valor.value)),
+            "DiaCobranca": dia,
+            "Cartao": _sel(self.cartao, CARTOES[0]),
+            "Ativa": "TRUE",
+            "Inicio": _hoje(),
+            "Fim": None,
+        }
+        await gravar_e_confirmar(
+            interaction, "Assinaturas", dados, titulo="🔔 Assinatura criada!", cor=COR_ASSINATURA
         )
 
 

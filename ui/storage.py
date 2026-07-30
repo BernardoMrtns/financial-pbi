@@ -73,6 +73,8 @@ def recibo_embed(
         "Prioridade": "⭐ Prioridade",
         "Tipo": "📈 Tipo",
         "Operacao": "🔁 Operação",
+        "DiaCobranca": "📅 Dia da cobrança",
+        "Inicio": "▶️ Início",
     }
     for chave, rotulo in rotulos.items():
         if chave in dados and str(dados[chave]).strip() not in ("", "0", "0.0"):

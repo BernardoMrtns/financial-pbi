@@ -35,6 +35,7 @@ PanelAction = Callable[[discord.Interaction], Awaitable[None]]
 PANEL_ACTIONS: dict[str, PanelAction | None] = {
     "fatura": None,
     "pix_editar": None,
+    "assinatura_toggle": None,
     "status": None,
     "run_script": None,
     "clear": None,
@@ -138,6 +139,21 @@ class PainelView(AuthorizedView):
         await interaction.response.send_modal(AssinaturaModal())
 
     @discord.ui.button(
+        label="Ass. On/Off",
+        emoji="🔄",
+        style=discord.ButtonStyle.secondary,
+        custom_id="painel:assinatura_toggle",
+    )
+    async def assinatura_toggle(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
+        acao = PANEL_ACTIONS.get("assinatura_toggle")
+        if acao is None:
+            await interaction.response.send_message(
+                "⚠️ Ação de assinatura ainda não configurada.", ephemeral=True
+            )
+            return
+        await acao(interaction)
+
+    @discord.ui.button(
         label="Status", emoji="🖥️", style=discord.ButtonStyle.secondary, custom_id="painel:status"
     )
     async def status(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
@@ -218,6 +234,7 @@ def painel_embed() -> discord.Embed:
 # --- Callback assinaturas para as views de edicao ---
 FaturaConfirm = Callable[[discord.Interaction, str, str], Awaitable[None]]
 PixConfirm = Callable[[discord.Interaction, str, int], Awaitable[None]]
+AssinaturaToggleConfirm = Callable[[discord.Interaction, str, str, bool], Awaitable[None]]
 
 
 class _FaturaSelect(discord.ui.Select):
@@ -267,3 +284,43 @@ class PixEditView(AuthorizedView):
     def __init__(self, compras: list[dict], on_confirm: PixConfirm) -> None:
         super().__init__(timeout=180)
         self.add_item(_PixSelect(compras, on_confirm))
+
+
+class _AssinaturaToggleSelect(discord.ui.Select):
+    def __init__(self, assinaturas: list[dict], on_confirm: AssinaturaToggleConfirm) -> None:
+        self._mapa = {str(a["id"]): a for a in assinaturas}
+        self._on_confirm = on_confirm
+        options = [
+            discord.SelectOption(
+                label=f"{a['nome']}"[:100],
+                description=(
+                    f"R$ {a['valor']} · {'🟢 Ativa' if a['ativa'] else '⚪ Inativa'} "
+                    f"→ {'desativar' if a['ativa'] else 'ativar'}"
+                )[:100],
+                value=str(a["id"]),
+                emoji="🟢" if a["ativa"] else "⚪",
+            )
+            for a in assinaturas[:25]
+        ]
+        super().__init__(
+            placeholder="Escolha a assinatura para alternar...",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        assinatura = self._mapa[self.values[0]]
+        nova_ativa = not assinatura["ativa"]
+        await self._on_confirm(
+            interaction, self.values[0], assinatura["nome"], nova_ativa
+        )
+
+
+class AssinaturaToggleView(AuthorizedView):
+    """Menu suspenso listando assinaturas reais para ativar/desativar."""
+
+    def __init__(self, assinaturas: list[dict], on_confirm: AssinaturaToggleConfirm) -> None:
+        super().__init__(timeout=180)
+        self.add_item(_AssinaturaToggleSelect(assinaturas, on_confirm))
