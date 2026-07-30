@@ -1,6 +1,6 @@
 import json
-from google import genai
-from google.genai import types
+from google import genai  # pyright: ignore[reportMissingImports]
+from google.genai import types  # pyright: ignore[reportMissingImports]
 from config import GEMINI_API_KEY
 from utils.logging_config import get_logger
 
@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
+def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
     prompt = f"""
     [DIRETRIZ DE SEGURANÇA MÁXIMA]
 
@@ -81,6 +81,8 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
     - x
     - cartão
     - crédito
+    - Apple Pay
+    - aproximação
 
     ENTÃO:
     tipo = "Credito"
@@ -132,7 +134,7 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
         tipo = "Invalido"
 
     - Se tipo == "Credito":
-        parcelas >= 2
+        parcelas >= 1
 
     - Se tipo != "Credito":
         parcelas = 1
@@ -188,7 +190,7 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
         categoria = "iFood"
 
     - descricao:
-      Resumo curto em Title Case.
+      Resumo curto em Title Case. Mapeie diretamente o nome da loja/comerciante se for uma compra por Apple Pay.
 
     - parcelas:
       Número inteiro.
@@ -337,12 +339,12 @@ def interpretar_gasto_com_ia(texto_usuario: str) -> dict:
 
     try:
         resposta = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=schema,
-                temperature=0
+                temperature=temperatura
             )
         )
 

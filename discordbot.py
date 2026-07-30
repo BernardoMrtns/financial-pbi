@@ -461,14 +461,25 @@ async def run_script_cmd(interaction: discord.Interaction):
 async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
-    if message.author.id != DISCORD_AUTHORIZED_USER_ID:
+
+    # Libera a execução se for o seu usuário autorizado OU o webhook do Apple Pay
+    is_authorized_user = (message.author.id == DISCORD_AUTHORIZED_USER_ID)
+    is_apple_pay_webhook = bool(message.webhook_id and message.content.startswith("[APPLEPAY]"))
+
+    if not (is_authorized_user or is_apple_pay_webhook):
         return
+
     # Ignora comandos de barra e mensagens vazias (anexos puros).
     if not message.content or message.content.startswith("/"):
         return
 
+    # Se for o webhook, limpa a tag "[APPLEPAY] " para entregar o texto puro para a IA
+    texto_processar = message.content.replace("[APPLEPAY] ", "") if is_apple_pay_webhook else message.content
+
     status_msg = await message.reply("🧠 Interpretando registro...")
-    dados_ia = interpretar_gasto_com_ia(message.content)
+    
+    # Chama a IA usando a string limpa
+    dados_ia = interpretar_gasto_com_ia(texto_processar)
 
     if not dados_ia:
         await status_msg.edit(content="❌ Não consegui entender os dados. Tente ser mais claro.")
@@ -545,11 +556,15 @@ async def on_message(message: discord.Message):
 
         salvar_transacao(aba_destino, dados_finais)
         valor = dados_finais.get("Valor", dados_finais.get("ValorTotal", dados_finais.get("Preço", 0)))
-        await status_msg.edit(content=f"✅ **{aba_destino}** atualizada! 💰 R$ {valor}")
+        
+        # Personaliza o emoji de sucesso se a entrada foi via Apple Pay
+        sucesso_icone = "🍎 **Apple Pay processado!**\n" if is_apple_pay_webhook else "✅ "
+        
+        await status_msg.edit(content=f"{sucesso_icone}**{aba_destino}** atualizada! 💰 R$ {valor:.2f}")
+        
     except Exception as e:
         logger.error("Falha ao processar transação IA em %s: %s", aba_destino, e)
         await status_msg.edit(content=f"❌ Erro ao comunicar com os serviços: {e}")
-
 
 if __name__ == "__main__":
     bot.run(DISCORD_TOKEN)

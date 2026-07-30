@@ -2540,16 +2540,6 @@
                       "Type": "Noun",
                       "Weight": 0.591
                     }
-                  },
-                  {
-                    "Total": {
-                      "Source": {
-                        "Agent": "PowerBI.VisualColumnRename",
-                        "Type": "External"
-                      },
-                      "State": "Suggested",
-                      "Weight": 0.9
-                    }
                   }
                 ]
               },
