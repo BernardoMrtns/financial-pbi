@@ -256,10 +256,15 @@ async def _limpar_chat(interaction: discord.Interaction):
         except discord.HTTPException:
             logger.warning("Nao foi possivel apagar uma mensagem do bot.")
 
-    await interaction.followup.send(
-        f"🧹 Limpei {apagadas} mensagem(ns) minhas neste canal.",
-        ephemeral=True,
-    )
+    if apagadas == 0:
+        mensagem = "🧹 Não encontrei mensagens para apagar neste canal."
+    elif apagadas == 1:
+        mensagem = "🧹 Limpei 1 mensagem minha neste canal."
+    else:
+        mensagem = f"🧹 Limpei {apagadas} mensagens minhas neste canal."
+
+    await interaction.followup.send(mensagem, ephemeral=True)
+    
 
 
 # ==========================================
