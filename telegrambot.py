@@ -1,378 +1,816 @@
+"""Bot financeiro do Telegram — paridade total com o bot do Discord.
+
+Toda a UI interativa vive num Telegram Mini App (pagina estatica hospedada no
+GitHub Pages, em `docs/`). O painel e um teclado de respostas persistente:
+
+  - Botoes de formulario (Receita, Debito, Cartao, PIX, Wishlist, Investir,
+    Assinatura, Fatura, SQL) abrem o Mini App e devolvem os dados via
+    `WebApp.sendData(JSON)` (tratado em `on_webapp_data`).
+  - Botoes que dependem de dados ao vivo (PIX Editar, Ass On/Off) sao botoes de
+    texto: o bot le o banco e reabre o Mini App ja com a lista embutida na URL.
+  - Botoes de acao (Status, ETL, Limpar) executam direto no bot.
+
+Alem do Mini App, mantem os comandos manuais (/debito, /receita, ...) e o
+registro por texto livre com IA. Apple Pay permanece exclusivo do Discord.
+"""
+
+import base64
 import html
+import json
 import os
 import subprocess
 import sys
+from collections import deque
 from datetime import datetime
 from functools import wraps
 
 import pandas as pd
-from telegram import Update
+from telegram import (
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Update,
+    WebAppInfo,
+)
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
-# Importações da arquitetura de serviços
-from services.google_sheets import conectar_google_sheets, adicionar_linha_aba, atualizar_registro_sheets
-from services.database import adicionar_linha_db, atualizar_registro_db
+import config
+from config import AUTHORIZED_USER_ID, SCHEMA_ABAS, TELEGRAM_TOKEN
 from services.ai_parser import interpretar_gasto_com_ia
-from utils.logging_config import get_logger
+from services.database import (
+    adicionar_linha_db,
+    atualizar_registro_db,
+    buscar_registro_db,
+    executar_sql_livre,
+    ler_tabela_db,
+)
+from services.google_sheets import atualizar_registro_sheets, conectar_google_sheets
+from ui.table_image import montar_resposta_sql
 from utils.data_utils import converter_numero_flexivel
-
-from config import TELEGRAM_TOKEN, AUTHORIZED_USER_ID, SCHEMA_ABAS
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 spreadsheet = None
 
-# --- DECORADOR DE SEGURANÇA ---
+# URL do Mini App (GitHub Pages). Pode ser sobrescrita em config.py se um dia
+# houver dominio proprio; caso contrario, usa o Pages do repositorio publico.
+MINIAPP_URL = getattr(config, "MINIAPP_URL", "https://bernardomrtns.github.io/financial-pbi/")
+
+
+# ==========================================
+#         ROTULOS DO PAINEL (TECLADO)
+# ==========================================
+
+BTN_PIX_EDITAR = "🔁 PIX Editar"
+BTN_ASS_TOGGLE = "🔄 Ass On/Off"
+BTN_STATUS = "🖥️ Status"
+BTN_ETL = "⚙️ ETL"
+BTN_LIMPAR = "🧹 Limpar"
+
+
+def _webapp(rotulo: str, screen: str) -> KeyboardButton:
+    """Botao de teclado que abre uma tela do Mini App."""
+    return KeyboardButton(rotulo, web_app=WebAppInfo(url=f"{MINIAPP_URL}#{screen}"))
+
+
+def painel_keyboard() -> ReplyKeyboardMarkup:
+    """Teclado persistente que reproduz o painel do Discord."""
+    return ReplyKeyboardMarkup(
+        [
+            [_webapp("🟢 Receita", "receita"), _webapp("🔴 Débito", "debito")],
+            [_webapp("💳 Cartão", "cartao"), _webapp("🔁 PIX", "pix")],
+            [_webapp("⭐ Wishlist", "wishlist"), _webapp("📈 Investir", "invest")],
+            [_webapp("🔔 Assinatura", "assinatura"), _webapp("📅 Fatura", "fatura")],
+            [KeyboardButton(BTN_PIX_EDITAR), KeyboardButton(BTN_ASS_TOGGLE)],
+            [_webapp("🗄️ SQL", "sql"), KeyboardButton(BTN_STATUS)],
+            [KeyboardButton(BTN_ETL), KeyboardButton(BTN_LIMPAR)],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+# ==========================================
+#         SEGURANCA + RASTREIO DE MENSAGENS
+# ==========================================
+
+
 def restrito(func):
-    """Garante que apenas o administrador autorizado possa interagir com o bot."""
+    """Garante que apenas o administrador autorizado interaja com o bot."""
+
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
-        if update.effective_user.id != AUTHORIZED_USER_ID:
-            logger.warning(f"Acesso não autorizado bloqueado. ID: {update.effective_user.id}")
-            await update.message.reply_text("⛔ Acesso restrito.")
+        if not update.effective_user or update.effective_user.id != AUTHORIZED_USER_ID:
+            uid = getattr(update.effective_user, "id", "?")
+            logger.warning("Acesso nao autorizado bloqueado. ID: %s", uid)
+            if update.effective_message:
+                await update.effective_message.reply_text("⛔ Acesso restrito. Este bot é privado.")
             return
         return await func(update, context, *args, **kwargs)
+
     return wrapper
 
-# --- LÓGICA DE REGISTRO ---
-async def processar_e_salvar(update: Update, aba: str, dados: dict):
-    """Executa a escrita em duplicado, garantindo a ordem correta das colunas."""
+
+def _rastrear(context: ContextTypes.DEFAULT_TYPE, message) -> None:
+    """Guarda o id de uma mensagem do bot para o /limpar poder apaga-la depois."""
+    if message is None:
+        return
+    fila: deque = context.chat_data.setdefault("bot_msgs", deque(maxlen=300))
+    fila.append(message.message_id)
+
+
+async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE, texto: str, **kwargs):
+    """Envia texto (HTML) e rastreia o id para a limpeza."""
+    kwargs.setdefault("parse_mode", ParseMode.HTML)
+    msg = await update.effective_message.reply_text(texto, **kwargs)
+    _rastrear(context, msg)
+    return msg
+
+
+# ==========================================
+#         PERSISTENCIA (DB + SHEETS)
+# ==========================================
+
+
+def salvar_registro(aba: str, dados: dict) -> float:
+    """Monta o DataFrame na ordem do schema, persiste no PostgreSQL e devolve o valor."""
+    df = pd.DataFrame([dados])
+    if aba in SCHEMA_ABAS:
+        df = df[SCHEMA_ABAS[aba]]
+    adicionar_linha_db(aba, df)
+    logger.info("Transacao registrada na aba %s", aba)
+    for chave in ("Valor", "ValorTotal", "Preço"):
+        if chave in dados:
+            try:
+                return float(dados[chave])
+            except (TypeError, ValueError):
+                return 0.0
+    return 0.0
+
+
+async def gravar_e_confirmar(update, context, aba: str, dados: dict, titulo: str) -> None:
+    """Grava a transacao e envia um recibo formatado (equivalente ao embed do Discord)."""
     try:
-        df = pd.DataFrame([dados])
-        
-        if aba in SCHEMA_ABAS:
-            colunas_corretas = SCHEMA_ABAS[aba]
-            df = df[colunas_corretas]
-        
-        adicionar_linha_db(aba, df)
-        
-        valor_display = dados.get('Valor', dados.get('ValorTotal', dados.get('Preço', 0)))
-        await update.message.reply_text(
-            f"✅ <b>{aba}</b> atualizada!\n💰 Montante: R$ {valor_display}", 
-            parse_mode=ParseMode.HTML
-        )
-    except Exception as e:
-        logger.error(f"Falha ao processar transação em {aba}: {e}")
-        await update.message.reply_text(f"❌ Erro ao comunicar com os serviços: {e}")
+        valor = salvar_registro(aba, dados)
+    except Exception as e:  # noqa: BLE001
+        logger.error("Falha ao salvar em %s: %s", aba, e)
+        await responder(update, context, f"❌ Erro ao comunicar com os serviços: {html.escape(str(e))}")
+        return
+
+    linhas = [titulo, f"💰 <b>Valor:</b> R$ {valor:,.2f}"]
+    rotulos = {
+        "Categoria": "🏷️ Categoria", "Descricao": "📝 Descrição", "Nome": "📝 Item",
+        "ContaSaida": "🏦 Conta", "ContaDestino": "🏦 Conta", "Cartao": "💳 Cartão",
+        "Parcelas": "🔢 Parcelas", "ValorEntrada": "💵 Entrada", "QtdPagas": "✅ Parcelas pagas",
+        "Prioridade": "⭐ Prioridade", "Tipo": "📈 Tipo", "Operacao": "🔁 Operação",
+        "DiaCobranca": "📅 Dia da cobrança", "Inicio": "▶️ Início",
+    }
+    for chave, rotulo in rotulos.items():
+        if chave in dados and str(dados[chave]).strip() not in ("", "0", "0.0"):
+            linhas.append(f"{rotulo}: {html.escape(str(dados[chave]))}")
+    await responder(update, context, "\n".join(linhas))
+
 
 # ==========================================
-#              SISTEMA E IA
+#         ROTEADOR DO MINI APP (web_app_data)
 # ==========================================
 
-@restrito
-async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🚀 Sistema Financeiro Online ativo. Pode mandar os gastos por texto ou usar /help.")
+
+def _hoje() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
 
 @restrito
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Recebe o JSON enviado por `WebApp.sendData` e roteia para a acao correta."""
+    try:
+        payload = json.loads(update.effective_message.web_app_data.data)
+    except (json.JSONDecodeError, AttributeError):
+        await responder(update, context, "❌ Dados do Mini App inválidos.")
+        return
+
+    acao = payload.get("action")
+    try:
+        if acao == "receita":
+            dados = {
+                "Data": _hoje(),
+                "Valor": converter_numero_flexivel(payload["valor"]),
+                "ContaDestino": payload["conta"],
+                "Categoria": payload["categoria"],
+                "Descricao": payload["descricao"],
+            }
+            await gravar_e_confirmar(update, context, "Receitas", dados, "🟢 <b>Receita registrada!</b>")
+
+        elif acao == "debito":
+            dados = {
+                "Data": _hoje(),
+                "Valor": converter_numero_flexivel(payload["valor"]),
+                "ContaSaida": payload["conta"],
+                "Categoria": payload["categoria"],
+                "Descricao": payload["descricao"],
+            }
+            await gravar_e_confirmar(update, context, "DebitoAvulso", dados, "🔴 <b>Débito registrado!</b>")
+
+        elif acao == "cartao":
+            try:
+                parcelas = max(1, int(str(payload.get("parcelas", "1")).strip() or "1"))
+            except ValueError:
+                parcelas = 1
+            dados = {
+                "Data": _hoje(),
+                "ValorTotal": converter_numero_flexivel(payload["valor"]),
+                "Cartao": payload["cartao"],
+                "Parcelas": parcelas,
+                "Categoria": payload["categoria"],
+                "Descricao": payload["descricao"],
+            }
+            await gravar_e_confirmar(update, context, "ComprasCartao", dados, "💳 <b>Compra registrada!</b>")
+
+        elif acao == "pix":
+            try:
+                pagas = max(0, int(str(payload.get("pagas", "1")).strip() or "1"))
+            except ValueError:
+                pagas = 1
+            dados = {
+                "Data": _hoje(),
+                "ValorTotal": converter_numero_flexivel(payload["valor"]),
+                "ValorEntrada": converter_numero_flexivel(payload.get("entrada", "0")),
+                "QtdPagas": pagas,
+                "Categoria": payload["categoria"],
+                "Descricao": payload["descricao"],
+            }
+            await gravar_e_confirmar(update, context, "PixParcelado", dados, "🔁 <b>PIX registrado!</b>")
+
+        elif acao == "wishlist":
+            dados = {
+                "Nome": str(payload["nome"]).replace("_", " "),
+                "Preço": converter_numero_flexivel(payload["preco"]),
+                "Categoria": payload["categoria"],
+                "Prioridade": payload.get("prioridade", "Media"),
+                "Link": "Adicionado via Bot",
+            }
+            await gravar_e_confirmar(update, context, "Wishlist", dados, "⭐ <b>Item na Wishlist!</b>")
+
+        elif acao == "invest":
+            dados = {
+                "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Tipo": str(payload["tipo"]).upper(),
+                "Operacao": payload["operacao"],
+                "Valor": converter_numero_flexivel(payload["valor"]),
+                "QuantidadeCripto": converter_numero_flexivel(payload.get("qtd_cripto", "0")),
+            }
+            await gravar_e_confirmar(update, context, "Investimentos", dados, "📈 <b>Investimento registrado!</b>")
+
+        elif acao == "assinatura":
+            try:
+                dia = min(31, max(1, int(str(payload.get("dia", "1")).strip() or "1")))
+            except ValueError:
+                dia = 1
+            dados = {
+                "Nome": str(payload["nome"]).strip(),
+                "Categoria": payload["categoria"],
+                "Valor": converter_numero_flexivel(payload["valor"]),
+                "DiaCobranca": dia,
+                "Cartao": payload["cartao"],
+                "Ativa": "TRUE",
+                "Inicio": _hoje(),
+                "Fim": None,
+            }
+            await gravar_e_confirmar(update, context, "Assinaturas", dados, "🔔 <b>Assinatura criada!</b>")
+
+        elif acao == "fatura":
+            await _aplicar_fatura(update, context, payload["cartao"], payload["nova_data"])
+
+        elif acao == "pix_editar":
+            await _aplicar_pix_editar(update, context, payload["id"], payload["qtd"])
+
+        elif acao == "ass_toggle":
+            await _aplicar_ass_toggle(update, context, payload["id"], payload["nome"], bool(payload["ativa"]))
+
+        elif acao == "sql":
+            try:
+                limite = int(str(payload.get("limite", "20")).strip() or "20")
+            except ValueError:
+                limite = 20
+            await _executar_sql(update, context, payload["query"], limite)
+
+        else:
+            await responder(update, context, "❓ Ação desconhecida do Mini App.")
+    except KeyError as e:
+        await responder(update, context, f"❌ Campo ausente no formulário: {html.escape(str(e))}")
+    except Exception as e:  # noqa: BLE001
+        logger.error("Erro ao processar acao '%s' do Mini App: %s", acao, e)
+        await responder(update, context, f"❌ Erro ao processar: {html.escape(str(e))}")
+
+
+# ==========================================
+#         EDICOES (DB + SHEETS)
+# ==========================================
+
+
+async def _aplicar_fatura(update, context, cartao: str, nova_data: str) -> None:
+    payload = {"ultimo_ciclo_pago": nova_data}
+    atualizar_registro_db("FaturasPagas", "cartao", cartao, payload)
+    if spreadsheet is not None:
+        atualizar_registro_sheets(spreadsheet, "FaturasPagas", "cartao", cartao, payload)
+    await responder(update, context, f"✅ Fatura <b>{html.escape(cartao)}</b> atualizada para: <b>{html.escape(nova_data)}</b>")
+
+
+async def _aplicar_pix_editar(update, context, id_compra, qtd) -> None:
+    nova_qtd = int(str(qtd).strip())
+    atualizar_registro_db("PixParcelado", "id", id_compra, {"qtd_pagas": nova_qtd})
+    if spreadsheet is not None:
+        atualizar_registro_sheets(spreadsheet, "PixParcelado", "id", id_compra, {"qtd_pagas": nova_qtd})
+    await responder(update, context, f"✅ Compra PIX #{html.escape(str(id_compra))} atualizada: <b>{nova_qtd} parcelas pagas</b>.")
+
+
+async def _aplicar_ass_toggle(update, context, id_assinatura, nome: str, nova_ativa: bool) -> None:
+    novo_valor = "TRUE" if nova_ativa else "FALSE"
+    atualizar_registro_db("Assinaturas", "id", id_assinatura, {"ativa": novo_valor})
+    if spreadsheet is not None:
+        # No Sheets a chave e o nome e o cabecalho segue o schema (capitalizado).
+        atualizar_registro_sheets(spreadsheet, "Assinaturas", "Nome", nome, {"Ativa": novo_valor})
+    estado = "🟢 ativada" if nova_ativa else "⚪ desativada"
+    await responder(update, context, f"✅ Assinatura <b>{html.escape(nome)}</b> {estado}.")
+
+
+async def _executar_sql(update, context, query: str, limite: int = 20) -> None:
+    texto, png = montar_resposta_sql(executar_sql_livre(query), limite)
+    if png is not None:
+        msg = await update.effective_message.reply_photo(photo=png, caption=texto, parse_mode=ParseMode.HTML)
+    else:
+        msg = await update.effective_message.reply_text(texto, parse_mode=ParseMode.HTML)
+    _rastrear(context, msg)
+
+
+# ==========================================
+#         BOTOES DE TEXTO (DADOS AO VIVO / ACOES)
+# ==========================================
+
+
+def _b64_payload(dados: list[dict]) -> str:
+    """Codifica a lista (JSON UTF-8) em base64 urlsafe para embutir na URL do Mini App."""
+    bruto = json.dumps(dados, ensure_ascii=False).encode("utf-8")
+    return base64.urlsafe_b64encode(bruto).decode("ascii")
+
+
+def _valor_verdadeiro(valor) -> bool:
+    if isinstance(valor, bool):
+        return valor
+    return str(valor).strip().upper() in ("TRUE", "1", "SIM", "T", "VERDADEIRO")
+
+
+@restrito
+async def abrir_pix_editar(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Le as compras PIX e reabre o Mini App com a lista embutida."""
+    df = ler_tabela_db("PixParcelado")
+    if df.empty:
+        await responder(update, context, "📭 Nenhuma compra PIX encontrada.")
+        return
+    compras = [
+        {
+            "id": int(row.get("id", idx)) if pd.notna(row.get("id", idx)) else idx,
+            "descricao": str(row.get("descricao", "—"))[:60],
+            "valor": row.get("valor_total", 0),
+            "pagas": row.get("qtd_pagas", 0),
+        }
+        for idx, row in df.tail(20).iterrows()
+    ]
+    url = f"{MINIAPP_URL}#pixedit?d={_b64_payload(compras)}"
+    teclado = ReplyKeyboardMarkup(
+        [[KeyboardButton("🔁 Escolher compra PIX", web_app=WebAppInfo(url=url))]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    msg = await update.effective_message.reply_text(
+        "🔁 Toque abaixo para escolher a compra PIX a editar:", reply_markup=teclado
+    )
+    _rastrear(context, msg)
+
+
+@restrito
+async def abrir_ass_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Le as assinaturas e reabre o Mini App com a lista embutida."""
+    df = ler_tabela_db("Assinaturas")
+    if df.empty:
+        await responder(update, context, "📭 Nenhuma assinatura encontrada.")
+        return
+    assinaturas = [
+        {
+            "id": int(row.get("id", idx)) if pd.notna(row.get("id", idx)) else idx,
+            "nome": str(row.get("nome", "—"))[:60],
+            "valor": row.get("valor", 0),
+            "ativa": _valor_verdadeiro(row.get("ativa", False)),
+        }
+        for idx, row in df.tail(20).iterrows()
+    ]
+    url = f"{MINIAPP_URL}#asstoggle?d={_b64_payload(assinaturas)}"
+    teclado = ReplyKeyboardMarkup(
+        [[KeyboardButton("🔄 Escolher assinatura", web_app=WebAppInfo(url=url))]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    msg = await update.effective_message.reply_text(
+        "🔄 Toque abaixo para escolher a assinatura a alternar:", reply_markup=teclado
+    )
+    _rastrear(context, msg)
+
+
+@restrito
+async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        ram = subprocess.check_output(
+            "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
+        ).decode().strip()
+        disco = subprocess.check_output(
+            "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
+        ).decode().strip()
+        msg = f"🖥️ <b>Saúde do Servidor:</b>\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+        await responder(update, context, msg)
+    except Exception:  # noqa: BLE001
+        await responder(update, context, "⚠️ Erro ao obter telemetria.")
+
+
+@restrito
+async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    projeto_root = os.path.dirname(os.path.abspath(__file__))
+    main_script = os.path.join(projeto_root, "main.py")
+
+    await responder(update, context, "🔄 Executando motor ETL... Aguarde.")
+    res = subprocess.run(
+        [sys.executable, main_script], cwd=projeto_root, capture_output=True, text=True
+    )
+    if res.returncode == 0:
+        await responder(update, context, "✅ Pipeline de Fluxo de Caixa concluída com sucesso!")
+    else:
+        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
+        detalhe = html.escape((res.stderr or res.stdout or "Erro desconhecido").strip())
+        await responder(update, context, f"❌ Falha na execução do script principal.\n<pre>{detalhe[:1500]}</pre>")
+
+
+@restrito
+async def limpar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Apaga as mensagens que o bot enviou neste chat (rastreadas em memoria)."""
+    fila: deque = context.chat_data.get("bot_msgs", deque())
+    chat_id = update.effective_chat.id
+    origem = update.effective_message.message_id
+    ids = [mid for mid in list(fila) if mid != origem]
+
+    apagadas = 0
+    for mid in ids:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+            apagadas += 1
+        except Exception:  # noqa: BLE001
+            pass  # >48h, ja apagada ou sem permissao
+    fila.clear()
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=origem)
+    except Exception:  # noqa: BLE001
+        pass
+
+    if apagadas == 0:
+        texto = "🧹 Não encontrei mensagens minhas para apagar neste chat."
+    elif apagadas == 1:
+        texto = "🧹 Limpei 1 mensagem minha neste chat."
+    else:
+        texto = f"🧹 Limpei {apagadas} mensagens minhas neste chat."
+    aviso = await context.bot.send_message(chat_id=chat_id, text=texto)
+    _rastrear(context, aviso)
+
+
+# ==========================================
+#         COMANDOS BASICOS
+# ==========================================
+
+
+@restrito
+async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    msg = await update.effective_message.reply_text(
+        "🚀 <b>Sistema Financeiro Online</b>\n\n"
+        "Use o painel abaixo (Mini Apps) para registrar em um toque, "
+        "mande o gasto por texto (ex: <i>gastei 30 no ifood</i>) ou use /help.",
+        parse_mode=ParseMode.HTML,
+        reply_markup=painel_keyboard(),
+    )
+    _rastrear(context, msg)
+
+
+@restrito
+async def painel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    msg = await update.effective_message.reply_text(
+        "💠 <b>Painel Financeiro</b>\nToque em um botão para abrir o formulário.",
+        parse_mode=ParseMode.HTML,
+        reply_markup=painel_keyboard(),
+    )
+    _rastrear(context, msg)
+
+
+@restrito
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     guia = (
         "🤖 <b>Centro de Comando Financeiro</b>\n"
         "<i>Toque em um comando para copiá-lo!</i>\n\n"
-        
+        "💠 <b>Painel (Mini App):</b> /painel — botões para tudo\n\n"
         "💰 <b>Registros Diários:</b>\n"
         "🔴 <code>/debito [valor] [conta] [categoria] [descrição]</code>\n"
         "🟢 <code>/receita [valor] [conta] [categoria] [descrição]</code>\n"
         "💳 <code>/cartao [total] [cartao] [parcelas] [categoria] [descrição]</code>\n"
         "🔁 <code>/pix [total] [entrada] [pagas] [categoria] [descrição]</code>\n"
         "📈 <code>/invest [tipo] [op] [valor] [qtd_cripto]</code>\n\n"
-        
         "🔄 <b>Edições:</b>\n"
         "📅 <code>/fatura_update [cartao] [nova_data]</code>\n"
         "🔢 <code>/pix_update [id_compra] [qtd_pagas]</code>\n"
         "🔔 <code>/ass_toggle [nome_assinatura]</code>\n\n"
-        
         "⭐ <b>Desejos:</b>\n"
         "🛒 <code>/wish_add [preco] [nome_com_underline] [cat] [prioridade]</code>\n\n"
-        
+        "🗄️ <b>Banco:</b>\n"
+        "<code>/sql [query]</code> — resultado como imagem\n\n"
         "🛠️ <b>Sistema:</b>\n"
-        "🖥️ /status - <i>Telemetria da VM</i>\n"
-        "⚙️ /run_script - <i>Recalcular Fluxo de Caixa</i>\n\n"
+        "🖥️ /status — <i>Telemetria da VM</i>\n"
+        "⚙️ /run_script — <i>Recalcular Fluxo de Caixa</i>\n"
+        "🧹 /limpar — <i>Apaga as mensagens do bot</i>\n\n"
         "💡 <b>Dica:</b> Você pode apenas escrever <i>'15 no inter com lanche'</i> e a IA entende!"
     )
-    await update.message.reply_text(guia, parse_mode=ParseMode.HTML)
+    msg = await update.effective_message.reply_text(guia, parse_mode=ParseMode.HTML)
+    _rastrear(context, msg)
 
-@restrito
-async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        ram = subprocess.check_output("free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True).decode().strip()
-        disco = subprocess.check_output("df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True).decode().strip()
-        msg = f"🖥️ <b>Saúde do Servidor:</b>\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
-        await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
-    except Exception:
-        await update.message.reply_text("⚠️ Erro ao obter telemetria.")
 
-@restrito
-async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Processa texto natural usando IA e roteia para a aba correta."""
-    status_msg = await update.message.reply_text("🧠 Interpretando registro...")
-    
-    dados_ia = interpretar_gasto_com_ia(update.message.text)
-    
-    if dados_ia:
-        # 1. Tenta apagar a mensagem de status UMA ÚNICA VEZ com segurança
-        try:
-            await context.bot.delete_message(
-                chat_id=update.effective_chat.id, 
-                message_id=status_msg.message_id
-            )
-        except Exception:
-            pass
-        
-        tipo_transacao = dados_ia.get("tipo", "debito").lower()
-        data_atual = datetime.now().strftime("%Y-%m-%d")
-
-        # 2. Barreira de Fogo
-        if tipo_transacao == "invalido":
-            await update.message.reply_text("❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸")
-            return
-        
-        # 3. ROTEADOR DE ABAS E COLUNAS
-        if tipo_transacao == "credito":
-            dados_finais = {
-                "Data": data_atual,
-                "ValorTotal": dados_ia["valor"],
-                "Cartao": dados_ia["conta_cartao"],
-                "Parcelas": dados_ia.get("parcelas", 1),
-                "Categoria": dados_ia["categoria"],
-                "Descricao": dados_ia["descricao"]
-            }
-            aba_destino = "ComprasCartao"
-            
-        elif tipo_transacao == "receita":
-            dados_finais = {
-                "Data": data_atual,
-                "Valor": dados_ia["valor"],
-                "ContaDestino": dados_ia["conta_cartao"],
-                "Categoria": dados_ia["categoria"],
-                "Descricao": dados_ia["descricao"]
-            }
-            aba_destino = "Receitas"
-            
-        elif tipo_transacao == "investimento":
-            dados_finais = {
-                "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "Tipo": dados_ia["tipo_investimento"].upper(),
-                "Operacao": dados_ia["operacao"],
-                "Valor": dados_ia["valor"],
-                "QuantidadeCripto": dados_ia.get("quantidade_cripto", 0.0)
-            }
-            aba_destino = "Investimentos"
-        
-        elif tipo_transacao == "pix":
-            dados_finais = {
-                "Data": data_atual,
-                "ValorTotal": dados_ia["valor"],
-                "ValorEntrada": dados_ia.get("valor_entrada", 0.0),
-                "QtdPagas": dados_ia.get("qtd_pagas", 1),
-                "Categoria": dados_ia["categoria"],
-                "Descricao": dados_ia["descricao"]
-            }
-            aba_destino = "PixParcelado"
-            
-        elif tipo_transacao == "wishlist":
-            dados_finais = {
-                "Nome": dados_ia["descricao"],
-                "Preço": dados_ia["valor"],
-                "Categoria": dados_ia["categoria"],
-                "Prioridade": dados_ia.get("prioridade", "Mid"),
-                "Link": "Adicionado via Bot"
-            }
-            aba_destino = "Wishlist"
-            
-        else: # Padrão: Débito Avulso
-            dados_finais = {
-                "Data": data_atual,
-                "Valor": dados_ia["valor"],
-                "ContaSaida": dados_ia["conta_cartao"],
-                "Categoria": dados_ia["categoria"],
-                "Descricao": dados_ia["descricao"]
-            }
-            aba_destino = "DebitoAvulso"
-
-        await processar_e_salvar(update, aba_destino, dados_finais)
-    else:
-        await status_msg.edit_text("❌ Não consegui entender os dados. Tente ser mais claro.")        
 # ==========================================
 #         COMANDOS MANUAIS (BACKUP/GERAL)
 # ==========================================
 
+
 @restrito
-async def debito_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def debito_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 4:
-        return await update.message.reply_text("⚠️ Formato: /debito [valor] [conta] [cat] [desc]")
+        return await responder(update, context, "⚠️ Formato: /debito [valor] [conta] [cat] [desc]")
     dados = {
-        "Data": datetime.now().strftime("%Y-%m-%d"),
+        "Data": _hoje(),
         "Valor": converter_numero_flexivel(context.args[0]),
         "ContaSaida": context.args[1],
         "Categoria": context.args[2],
-        "Descricao": " ".join(context.args[3:])
+        "Descricao": " ".join(context.args[3:]),
     }
-    await processar_e_salvar(update, "DebitoAvulso", dados)
+    await gravar_e_confirmar(update, context, "DebitoAvulso", dados, "🔴 <b>Débito registrado!</b>")
+
 
 @restrito
-async def receita_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def receita_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 4:
-        return await update.message.reply_text("⚠️ Formato: /receita [valor] [conta] [cat] [desc]")
+        return await responder(update, context, "⚠️ Formato: /receita [valor] [conta] [cat] [desc]")
     dados = {
-        "Data": datetime.now().strftime("%Y-%m-%d"),
+        "Data": _hoje(),
         "Valor": converter_numero_flexivel(context.args[0]),
         "ContaDestino": context.args[1],
         "Categoria": context.args[2],
-        "Descricao": " ".join(context.args[3:])
+        "Descricao": " ".join(context.args[3:]),
     }
-    await processar_e_salvar(update, "Receitas", dados)
+    await gravar_e_confirmar(update, context, "Receitas", dados, "🟢 <b>Receita registrada!</b>")
+
 
 @restrito
-async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 5:
-        return await update.message.reply_text("⚠️ Formato: /cartao [valor] [cartao] [parc] [cat] [desc]")
+        return await responder(update, context, "⚠️ Formato: /cartao [valor] [cartao] [parc] [cat] [desc]")
     dados = {
-        "Data": datetime.now().strftime("%Y-%m-%d"),
+        "Data": _hoje(),
         "ValorTotal": converter_numero_flexivel(context.args[0]),
         "Cartao": context.args[1],
         "Parcelas": int(context.args[2]),
         "Categoria": context.args[3],
-        "Descricao": " ".join(context.args[4:])
+        "Descricao": " ".join(context.args[4:]),
     }
-    await processar_e_salvar(update, "ComprasCartao", dados)
+    await gravar_e_confirmar(update, context, "ComprasCartao", dados, "💳 <b>Compra registrada!</b>")
+
 
 @restrito
-async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 5:
-        return await update.message.reply_text("⚠️ Formato: /pix [total] [ent] [pagas] [cat] [desc]")
+        return await responder(update, context, "⚠️ Formato: /pix [total] [ent] [pagas] [cat] [desc]")
     dados = {
-        "Data": datetime.now().strftime("%Y-%m-%d"),
+        "Data": _hoje(),
         "ValorTotal": converter_numero_flexivel(context.args[0]),
         "ValorEntrada": converter_numero_flexivel(context.args[1]),
         "QtdPagas": int(context.args[2]),
         "Categoria": context.args[3],
-        "Descricao": " ".join(context.args[4:])
+        "Descricao": " ".join(context.args[4:]),
     }
-    await processar_e_salvar(update, "PixParcelado", dados)
+    await gravar_e_confirmar(update, context, "PixParcelado", dados, "🔁 <b>PIX registrado!</b>")
+
 
 @restrito
-async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 3:
-        return await update.message.reply_text("⚠️ Formato: /invest [tipo] [op] [valor] [qtd_cripto]")
+        return await responder(update, context, "⚠️ Formato: /invest [tipo] [op] [valor] [qtd_cripto]")
     qtd = converter_numero_flexivel(context.args[3]) if len(context.args) > 3 else 0.0
     dados = {
         "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "Tipo": context.args[0].upper(),
         "Operacao": context.args[1],
         "Valor": converter_numero_flexivel(context.args[2]),
-        "QuantidadeCripto": qtd
+        "QuantidadeCripto": qtd,
     }
-    await processar_e_salvar(update, "Investimentos", dados)
+    await gravar_e_confirmar(update, context, "Investimentos", dados, "📈 <b>Investimento registrado!</b>")
+
 
 @restrito
-async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    projeto_root = os.path.dirname(os.path.abspath(__file__))
-    main_script = os.path.join(projeto_root, "main.py")
-
-    await update.message.reply_text("🔄 Executando motor ETL... Aguarde.")
-    res = subprocess.run(
-        [sys.executable, main_script],
-        cwd=projeto_root,
-        capture_output=True,
-        text=True,
-    )
-    if res.returncode == 0:
-        await update.message.reply_text("✅ Pipeline concluída com sucesso!")
-    else:
-        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
-        detalhe_erro = html.escape((res.stderr or res.stdout or "Erro desconhecido").strip())
-        await update.message.reply_text(
-            "❌ Falha na execução do script principal.\n"
-            f"<pre>{detalhe_erro[:1500]}</pre>",
-            parse_mode=ParseMode.HTML,
-        )
-
-# ==========================================
-#         COMANDOS DE EDIÇÃO (UPDATE)
-# ==========================================
-
-@restrito
-async def fatura_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        return await update.message.reply_text("⚠️ Use: /fatura_update [Cartão] [Nova_Data]")
-    cartao, nova_data = context.args[0], context.args[1]
-    payload = {"ultimo_ciclo_pago": nova_data}
-    
-    atualizar_registro_db("FaturasPagas", "cartao", cartao, payload)
-    atualizar_registro_sheets(spreadsheet, "FaturasPagas", "cartao", cartao, payload)
-    await update.message.reply_text(f"✅ Fatura <b>{cartao}</b> atualizada para: {nova_data}", parse_mode=ParseMode.HTML)
-
-@restrito
-async def pix_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        return await update.message.reply_text("⚠️ Use: /pix_update [ID_da_Compra] [Qtd_Pagas]")
-    id_compra, nova_qtd = context.args[0], int(context.args[1])
-    payload = {"qtd_pagas": nova_qtd}
-    
-    atualizar_registro_db("PixParcelado", "id", id_compra, payload)
-    atualizar_registro_sheets(spreadsheet, "PixParcelado", "id", id_compra, payload)
-    await update.message.reply_text(f"✅ Compra PIX #{id_compra} atualizada: <b>{nova_qtd} parcelas pagas</b>.", parse_mode=ParseMode.HTML)
-
-@restrito
-async def ass_toggle_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 1:
-        return await update.message.reply_text("⚠️ Use: /ass_toggle [Nome_Assinatura]")
-    
-    # Exemplo simples, exigiria ler o status atual para inverter (toggle). 
-    # Deixei o placeholder para você adicionar a lógica completa de busca, mas a função já não vai gerar erro no Pylance.
-    nome_assinatura = " ".join(context.args)
-    await update.message.reply_text(f"🔄 Comando recebido para assinatura: <b>{nome_assinatura}</b>", parse_mode=ParseMode.HTML)
-
-@restrito
-async def wishlist_add_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def wishlist_add_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if len(context.args) < 4:
-        return await update.message.reply_text("⚠️ Formato: /wish_add [preco] [nome_underline] [cat] [prioridade]")
+        return await responder(update, context, "⚠️ Formato: /wish_add [preco] [nome_underline] [cat] [prioridade]")
     dados = {
-        "nome": context.args[1].replace("_", " "),
-        "preco": converter_numero_flexivel(context.args[0]),
-        "categoria": context.args[2],
-        "prioridade": context.args[3],
-        "link": "Adicionado via Bot"
+        "Nome": context.args[1].replace("_", " "),
+        "Preço": converter_numero_flexivel(context.args[0]),
+        "Categoria": context.args[2],
+        "Prioridade": context.args[3],
+        "Link": "Adicionado via Bot",
     }
-    await processar_e_salvar(update, "Wishlist", dados)
+    await gravar_e_confirmar(update, context, "Wishlist", dados, "⭐ <b>Item na Wishlist!</b>")
+
+
+@restrito
+async def fatura_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if len(context.args) < 2:
+        return await responder(update, context, "⚠️ Use: /fatura_update [Cartão] [Nova_Data]")
+    await _aplicar_fatura(update, context, context.args[0], context.args[1])
+
+
+@restrito
+async def pix_update_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if len(context.args) < 2:
+        return await responder(update, context, "⚠️ Use: /pix_update [ID_da_Compra] [Qtd_Pagas]")
+    try:
+        await _aplicar_pix_editar(update, context, context.args[0], context.args[1])
+    except ValueError:
+        await responder(update, context, "❌ Quantidade inválida.")
+
+
+@restrito
+async def ass_toggle_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Inverte o estado da assinatura pelo nome (le o estado atual e alterna)."""
+    if len(context.args) < 1:
+        return await responder(update, context, "⚠️ Use: /ass_toggle [Nome_Assinatura]")
+    nome = " ".join(context.args)
+    registro = buscar_registro_db("Assinaturas", "nome", nome)
+    if not registro:
+        return await responder(update, context, f"📭 Assinatura <b>{html.escape(nome)}</b> não encontrada.")
+    nova_ativa = not _valor_verdadeiro(registro.get("ativa", False))
+    await _aplicar_ass_toggle(update, context, registro.get("id"), nome, nova_ativa)
+
+
+@restrito
+async def sql_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = " ".join(context.args).strip()
+    if not query:
+        return await responder(update, context, "⚠️ Use: <code>/sql SELECT * FROM compras_cartao LIMIT 5</code>")
+    await _executar_sql(update, context, query)
 
 
 # ==========================================
-#              STARTUP
+#         TEXTO LIVRE (IA PARSER)
 # ==========================================
 
-def main():
+
+@restrito
+async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Processa texto natural usando IA e roteia para a aba correta."""
+    status_msg = await update.effective_message.reply_text("🧠 Interpretando registro...")
+    dados_ia = interpretar_gasto_com_ia(update.effective_message.text)
+
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
+    except Exception:  # noqa: BLE001
+        pass
+
+    if not dados_ia:
+        await responder(update, context, "❌ Não consegui entender os dados. Tente ser mais claro.")
+        return
+
+    tipo_transacao = dados_ia.get("tipo", "debito").lower()
+    data_atual = _hoje()
+
+    if tipo_transacao == "invalido":
+        await responder(
+            update, context,
+            "❌ Injeção bloqueada! Eu sou um bot financeiro, não converso sobre outros assuntos. 💸",
+        )
+        return
+
+    # Backstop: sem valor positivo nao gravamos (exceto wishlist, cujo preco pode faltar).
+    valor_ia = dados_ia.get("valor") or 0
+    if tipo_transacao != "wishlist" and valor_ia <= 0:
+        await responder(
+            update, context,
+            "❌ Não identifiquei um valor válido. Nada foi gravado. Ex: <code>50 mercado</code>.",
+        )
+        return
+
+    if tipo_transacao == "credito":
+        aba_destino = "ComprasCartao"
+        dados_finais = {
+            "Data": data_atual, "ValorTotal": dados_ia["valor"], "Cartao": dados_ia["conta_cartao"],
+            "Parcelas": dados_ia.get("parcelas", 1), "Categoria": dados_ia["categoria"],
+            "Descricao": dados_ia["descricao"],
+        }
+        titulo = "💳 <b>Compra registrada!</b>"
+    elif tipo_transacao == "receita":
+        aba_destino = "Receitas"
+        dados_finais = {
+            "Data": data_atual, "Valor": dados_ia["valor"], "ContaDestino": dados_ia["conta_cartao"],
+            "Categoria": dados_ia["categoria"], "Descricao": dados_ia["descricao"],
+        }
+        titulo = "🟢 <b>Receita registrada!</b>"
+    elif tipo_transacao == "investimento":
+        aba_destino = "Investimentos"
+        dados_finais = {
+            "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Tipo": dados_ia["tipo_investimento"].upper(), "Operacao": dados_ia["operacao"],
+            "Valor": dados_ia["valor"], "QuantidadeCripto": dados_ia.get("quantidade_cripto", 0.0),
+        }
+        titulo = "📈 <b>Investimento registrado!</b>"
+    elif tipo_transacao == "pix":
+        aba_destino = "PixParcelado"
+        dados_finais = {
+            "Data": data_atual, "ValorTotal": dados_ia["valor"],
+            "ValorEntrada": dados_ia.get("valor_entrada", 0.0), "QtdPagas": dados_ia.get("qtd_pagas", 1),
+            "Categoria": dados_ia["categoria"], "Descricao": dados_ia["descricao"],
+        }
+        titulo = "🔁 <b>PIX registrado!</b>"
+    elif tipo_transacao == "wishlist":
+        aba_destino = "Wishlist"
+        dados_finais = {
+            "Nome": dados_ia["descricao"], "Preço": dados_ia["valor"], "Categoria": dados_ia["categoria"],
+            "Prioridade": dados_ia.get("prioridade", "Media"), "Link": "Adicionado via Bot",
+        }
+        titulo = "⭐ <b>Item na Wishlist!</b>"
+    else:
+        aba_destino = "DebitoAvulso"
+        dados_finais = {
+            "Data": data_atual, "Valor": dados_ia["valor"], "ContaSaida": dados_ia["conta_cartao"],
+            "Categoria": dados_ia["categoria"], "Descricao": dados_ia["descricao"],
+        }
+        titulo = "🔴 <b>Débito registrado!</b>"
+
+    await gravar_e_confirmar(update, context, aba_destino, dados_finais, titulo)
+
+
+# ==========================================
+#         STARTUP
+# ==========================================
+
+
+def main() -> None:
     global spreadsheet
     logger.info("A ligar ao ecossistema Google...")
     spreadsheet = conectar_google_sheets()
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    # Handlers Básicos
+    # Basicos
     app.add_handler(CommandHandler("start", start_cmd))
+    app.add_handler(CommandHandler("painel", painel_cmd))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status_cmd))
     app.add_handler(CommandHandler("run_script", run_script_cmd))
-    
-    # Handlers de Lançamento Manual
+    app.add_handler(CommandHandler("limpar", limpar_cmd))
+
+    # Lancamento manual
     app.add_handler(CommandHandler("debito", debito_cmd))
     app.add_handler(CommandHandler("receita", receita_cmd))
     app.add_handler(CommandHandler("cartao", cartao_cmd))
     app.add_handler(CommandHandler("pix", pix_cmd))
     app.add_handler(CommandHandler("invest", invest_cmd))
+    app.add_handler(CommandHandler("wish_add", wishlist_add_cmd))
 
-    # Handlers de Atualização
+    # Edicao
     app.add_handler(CommandHandler("fatura_update", fatura_update_cmd))
     app.add_handler(CommandHandler("pix_update", pix_update_cmd))
     app.add_handler(CommandHandler("ass_toggle", ass_toggle_cmd))
-    app.add_handler(CommandHandler("wish_add", wishlist_add_cmd))
+    app.add_handler(CommandHandler("sql", sql_cmd))
 
-    # Handler de texto livre (IA) SEMPRE POR ÚLTIMO
+    # Mini App: dados enviados por WebApp.sendData
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, on_webapp_data))
+
+    # Botoes de texto do painel (dados ao vivo / acoes)
+    app.add_handler(MessageHandler(filters.Text([BTN_PIX_EDITAR]), abrir_pix_editar))
+    app.add_handler(MessageHandler(filters.Text([BTN_ASS_TOGGLE]), abrir_ass_toggle))
+    app.add_handler(MessageHandler(filters.Text([BTN_STATUS]), status_cmd))
+    app.add_handler(MessageHandler(filters.Text([BTN_ETL]), run_script_cmd))
+    app.add_handler(MessageHandler(filters.Text([BTN_LIMPAR]), limpar_cmd))
+
+    # Texto livre (IA) SEMPRE POR ULTIMO
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), mensagem_livre_cmd))
 
-    logger.info("Bot financeiro com IA em escuta!")
+    logger.info("Bot financeiro com Mini App em escuta!")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()

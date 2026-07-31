@@ -1,175 +1,122 @@
-# Guia de Configuração - Telegram Bot
+# Guia de Configuração — Telegram Bot (com Mini App)
 
-## Resumo das Alterações
+O `telegrambot.py` tem **paridade total** com o bot do Discord. Toda a UI
+interativa é um **Telegram Mini App** — uma página estática (`docs/index.html`)
+hospedada de graça no **GitHub Pages**. Não há servidor, domínio nem custo.
 
-O arquivo `telegrambot.py` foi refatorado para se integrar com a estrutura do projeto:
+## Como funciona
 
-### ✅ Melhorias Implementadas
-
-1. **Integração com Configurações Centralizadas**
-   - Usa `config.py` para todas as constantes
-   - Utiliza `SCHEMA_ABAS` para validar estrutura das abas
-   - Token do bot configurado via variável de ambiente
-
-2. **Serviços Compartilhados**
-   - Usa `services/google_sheets.py` para conexão
-   - Utiliza `utils/logging_config.py` para logging centralizado
-   - Reutiliza funções de retry e tratamento de erros
-
-3. **Qualidade do Código**
-   - Type hints em todas as funções
-   - Docstrings explicativas
-   - Tratamento robusto de erros
-   - Logging detalhado de operações
-
-4. **Funcionalidades**
-   - DataFrames com colunas validadas do schema
-   - Melhor parsing de argumentos
-   - Mensagens mais informativas
-   - Comandos `/start` e `/help`
+- **Painel** = teclado persistente (aparece no `/start` e `/painel`).
+- **Botões de formulário** (Receita, Débito, Cartão, PIX, Wishlist, Investir,
+  Assinatura, Fatura, SQL) abrem o Mini App; ao enviar, os dados voltam ao bot
+  via `WebApp.sendData()` e são gravados.
+- **PIX Editar** e **Ass On/Off** leem o banco ao vivo: o bot busca a lista e
+  reabre o Mini App já com os itens embutidos na URL, você escolhe e confirma.
+- **SQL** devolve o resultado como **imagem PNG** (igual ao Discord).
+- **Status / ETL / Limpar** executam direto no bot.
+- Continuam funcionando os **comandos manuais** (`/debito`, `/receita`, …) e o
+  **texto livre com IA** (ex.: *"15 no inter com lanche"*).
+- **Apple Pay** permanece exclusivo do bot do Discord.
 
 ---
 
-## Instalação e Configuração
+## 1. Ativar o GitHub Pages (passo único — obrigatório)
 
-### 1. Instalar Dependências
+O Mini App precisa estar em HTTPS. O GitHub Pages faz isso de graça porque o
+repositório é público.
+
+1. Faça commit/push da pasta `docs/` (ela contém `index.html` e `.nojekyll`).
+2. No GitHub, abra o repositório → **Settings** → **Pages**.
+3. Em **Source**, escolha **Deploy from a branch**.
+4. Em **Branch**, selecione **`main`** e a pasta **`/docs`** → **Save**.
+5. Aguarde ~1 minuto e confirme que este endereço abre no navegador:
+
+   ```
+   https://bernardomrtns.github.io/financial-pbi/
+   ```
+
+   (Ao abrir fora do Telegram, os botões mostram um alerta em vez de gravar —
+   isso é esperado. Dentro do Telegram eles enviam os dados ao bot.)
+
+> Se um dia você usar outro repositório/usuário ou um domínio próprio, defina
+> `MINIAPP_URL = "https://.../"` no `config.py` que o bot usa. Sem isso, o bot
+> usa o Pages padrão acima.
+
+---
+
+## 2. Criar o bot no Telegram
+
+1. Fale com [@BotFather](https://t.me/botfather) → `/newbot` → copie o **token**.
+2. Descubra seu **user id** com [@userinfobot](https://t.me/userinfobot).
+
+---
+
+## 3. Configurar o `config.py`
+
+O `config.py` é **gitignored** (fica só na sua máquina / no secret `CONFIG_PY`
+do GitHub Actions). Ele precisa conter, no mínimo:
+
+```python
+TELEGRAM_TOKEN = "123456:AA..."      # token do BotFather
+AUTHORIZED_USER_ID = 987654321        # seu id do @userinfobot
+DB_URL = "postgresql+psycopg2://usuario:senha@host:5432/banco"
+GEMINI_API_KEY = "sua_chave_gemini"   # texto livre com IA
+# MINIAPP_URL = "https://.../"        # opcional, só se mudar de host
+```
+
+(Se você também roda o bot do Discord, mantenha `DISCORD_TOKEN` e
+`DISCORD_AUTHORIZED_USER_ID` no mesmo arquivo.)
+
+---
+
+## 4. Instalar e executar
 
 ```bash
 pip install -r requirements.txt
-```
-
-O `python-telegram-bot>=21.0` foi adicionado ao `requirements.txt`.
-
-### 2. Obter Token do Telegram
-
-1. Conversa com [@BotFather](https://t.me/botfather) no Telegram
-2. Use `/newbot` para criar um novo bot
-3. Copie o token fornecido
-
-### 3. Configurar Variável de Ambiente
-
-**Windows (PowerShell):**
-```powershell
-$env:TELEGRAM_BOT_TOKEN="seu_token_aqui"
-```
-
-**Windows (CMD):**
-```cmd
-set TELEGRAM_BOT_TOKEN=seu_token_aqui
-```
-
-**Linux/macOS:**
-```bash
-export TELEGRAM_BOT_TOKEN="seu_token_aqui"
-```
-
-### 4. Executar o Bot
-
-```bash
 python telegrambot.py
 ```
 
----
-
-## Comandos Disponíveis
-
-| Comando | Uso | Exemplo |
-|---------|-----|---------|
-| `/start` | Exibe menu de ajuda | `/start` |
-| `/help` | Exibe menu de ajuda | `/help` |
-| `/debito` | Registrar débito avulso | `/debito 100 Compra Padaria Alimentacao CC1` |
-| `/receita` | Registrar receita | `/receita 5000 Salario Fixo Salario ContaCorrente` |
-| `/cartao` | Registrar compra no cartão | `/cartao 250 Compras Gerais Alimentacao Nubank 1` |
-| `/pix` | Registrar Pix parcelado | `/pix 1200 Celular Eletrônicos 200 12` |
-| `/invest` | Registrar investimento | `/invest Bitcoin Compra 50000 0.001` |
+No Telegram, envie `/start` — o painel aparece. Toque em **🟢 Receita** para
+testar o Mini App.
 
 ---
 
-## Estrutura dos Dados
+## Comandos
 
-### DebitoAvulso
-```
-/debito <valor> <descrição> <categoria> <conta>
-```
-Colunas: `Data, Descrição, Categoria, Valor, ContaSaída`
-
-### Receitas
-```
-/receita <valor> <descrição> <categoria> <conta>
-```
-Colunas: `Data, Descrição, Categoria, Valor, ContaDestino`
-
-### ComprasCartao
-```
-/cartao <valor> <descrição> <categoria> <cartão> <parcelas>
-```
-Colunas: `Data, Descrição, Categoria, Cartão, ValorTotal, Parcelas`
-
-### PixParcelado
-```
-/pix <total> <descrição> <categoria> <entrada> <pagas>
-```
-Colunas: `Data, Descrição, Categoria, ValorTotal, ValorEntrada, QtdPagas`
-
-### Investimentos
-```
-/invest <tipo> <operação> <valor> <quantidade>
-```
-Colunas: `Data, Tipo, Operação, Valor, Quantidade, QuantidadeCripto`
+| Comando | Uso |
+|---|---|
+| `/start`, `/painel` | Abre o painel (Mini App) |
+| `/help` | Lista de comandos |
+| `/debito`, `/receita` | `[valor] [conta] [categoria] [descrição]` |
+| `/cartao` | `[total] [cartao] [parcelas] [categoria] [descrição]` |
+| `/pix` | `[total] [entrada] [pagas] [categoria] [descrição]` |
+| `/invest` | `[tipo] [operação] [valor] [qtd_cripto]` |
+| `/wish_add` | `[preço] [nome_com_underline] [categoria] [prioridade]` |
+| `/fatura_update` | `[cartão] [nova_data]` |
+| `/pix_update` | `[id_compra] [qtd_pagas]` |
+| `/ass_toggle` | `[nome_assinatura]` — alterna ativa/inativa |
+| `/sql` | `[query]` — resultado como imagem |
+| `/status` | Telemetria da VM |
+| `/run_script` | Recalcular Fluxo de Caixa (ETL) |
+| `/limpar` | Apaga as mensagens do bot no chat |
 
 ---
 
-## Logging e Monitoramento
+## Solução de problemas
 
-Os logs são salvos em `logs/financial-pbi.log` e exibidos no console.
-
-**Exemplos de logs:**
-- ✅ Operação bem-sucedida
-- ❌ Erro no parsing de argumentos
-- ⚠️ Erro de conexão com Google Sheets
-
----
-
-## Tratamento de Erros
-
-O bot trata automaticamente:
-- ✅ Falta de argumentos
-- ✅ Erros de conexão com Google Sheets
-- ✅ Limites de rate do Google Sheets (retry automático)
-- ✅ Timeout de requisições
-
----
-
-## Troubleshooting
-
-### "Token não configurado"
-- Certifique-se que `TELEGRAM_BOT_TOKEN` está definido
-- Reinicie o terminal após definir a variável
-
-### "Erro ao conectar ao Google Sheets"
-- Verifique se `credentials.json` existe
-- Confira se o `SPREADSHEET_ID` está correto em `config.py`
-- Teste a conexão rodando `main.py`
-
-### "Aba não encontrada"
-- A aba será criada automaticamente na primeira inserção
-- Verifique se o nome da aba corresponde ao schema
-
----
-
-## Desenvolvimento Futuro
-
-Possíveis melhorias:
-- [ ] Sistema de autenticação para usuários
-- [ ] Relatórios mensais via bot
-- [ ] Alertas de gastos
-- [ ] Integração com webhooks
-- [ ] Suporte a transações em lote
+- **Botão do Mini App abre página em branco / erro** → o Pages ainda não
+  propagou (aguarde) ou a pasta `/docs` não foi selecionada em Settings → Pages.
+- **"Bad Request: BUTTON_TYPE_INVALID" ao enviar o teclado** → a URL não é
+  HTTPS válida; confirme o endereço do passo 1.
+- **Mini App não grava nada** → o botão precisa ser do **teclado de respostas**
+  (é o caso aqui). Botões inline não conseguem usar `sendData`.
+- **PIX Editar / Ass On/Off vazios** → não há registros na tabela ainda.
+- **`/status` com erro** → os comandos `free`/`df` são de Linux (a VM).
 
 ---
 
 ## Referências
 
-- [python-telegram-bot Documentation](https://docs.python-telegram-bot.org/)
-- [Google Sheets API](https://developers.google.com/sheets/api)
-- Documentação local do projeto em `README.md`
+- [Telegram Mini Apps](https://core.telegram.org/bots/webapps)
+- [python-telegram-bot](https://docs.python-telegram-bot.org/)
+- [GitHub Pages](https://docs.github.com/pages)

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel Financeiro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #17212b);
+    --sec: var(--tg-theme-secondary-bg-color, #232e3c);
+    --text: var(--tg-theme-text-color, #ffffff);
+    --hint: var(--tg-theme-hint-color, #7d8b99);
+    --link: var(--tg-theme-link-color, #64b5ef);
+    --btn: var(--tg-theme-button-color, #50a8eb);
+    --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+  }
+  #app { padding: 16px 16px 96px; max-width: 560px; margin: 0 auto; }
+  .title { font-size: 22px; font-weight: 700; margin: 4px 0 4px; display: flex; align-items: center; gap: 8px; }
+  .subtitle { color: var(--hint); font-size: 14px; margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 6px; padding-left: 2px; }
+  input, select, textarea {
+    width: 100%; padding: 13px 14px; font-size: 16px;
+    background: var(--sec); color: var(--text);
+    border: 1px solid transparent; border-radius: var(--radius);
+    outline: none; appearance: none; -webkit-appearance: none;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--btn); }
+  textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; }
+  select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237d8b99' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > .field { flex: 1; }
+  .hint-line { color: var(--hint); font-size: 12px; margin: -8px 0 14px; padding-left: 2px; }
+  .list-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px; background: var(--sec); border-radius: var(--radius);
+    margin-bottom: 10px; cursor: pointer; border: 2px solid transparent;
+  }
+  .list-item.sel { border-color: var(--btn); }
+  .list-item .emoji { font-size: 20px; }
+  .list-item .info { flex: 1; min-width: 0; }
+  .list-item .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-item .meta { font-size: 13px; color: var(--hint); }
+  .empty { color: var(--hint); text-align: center; padding: 40px 0; }
+  .toggle-badge { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+  .on { background: rgba(46,204,113,.18); color: #2ecc71; }
+  .off { background: rgba(125,139,153,.18); color: var(--hint); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+/* ---- Constantes canonicas (espelham ui/constants.py + ai_parser) ---- */
+const CATEGORIAS = ["Vestuário","Comida","iFood","Lazer","Saúde","Presentes","Utilidades",
+  "Eletrônicos","Moradia","Transporte","Educação","Assinaturas","Viagem","Bebidas","Outros"];
+const CARTOES = ["Inter","Nubank","MercadoPago","PicPay","AmazonPrime"];
+const CONTAS  = ["Inter","Nubank","MercadoPago","PicPay","Dinheiro"];
+const PRIORIDADES = ["Baixa","Media","Alta"];
+
+const app = document.getElementById("app");
+
+/* ---- Helpers ---- */
+function h(html){ app.innerHTML = html; }
+function el(id){ return document.getElementById(id); }
+function opts(list, sel){
+  return list.map(o => `<option value="${o}"${o===sel?" selected":""}>${o}</option>`).join("");
+}
+function header(emoji, titulo, sub){
+  return `<div class="title">${emoji} ${titulo}</div>` +
+         (sub ? `<div class="subtitle">${sub}</div>` : "");
+}
+function field(label, inner){ return `<div class="field"><label>${label}</label>${inner}</div>`; }
+
+function decodePayload(){
+  // Le dados injetados pelo bot no fragmento: #screen?d=<urlsafe_base64(json)>
+  const raw = location.hash.slice(1);
+  const q = raw.indexOf("?");
+  const screen = q >= 0 ? raw.slice(0, q) : raw;
+  let data = null;
+  if (q >= 0){
+    const params = new URLSearchParams(raw.slice(q + 1));
+    const d = params.get("d");
+    if (d){
+      try {
+        let s = d.replace(/-/g,"+").replace(/_/g,"/");
+        while (s.length % 4) s += "=";
+        const bin = atob(s);
+        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        data = JSON.parse(new TextDecoder("utf-8").decode(bytes));
+      } catch(e){ data = null; }
+    }
+  }
+  return { screen: screen || "painel", data };
+}
+
+let submitFn = null;
+function setSubmit(text, fn){
+  submitFn = fn;
+  if (!tg){ return; }
+  tg.MainButton.setText(text);
+  tg.MainButton.show();
+  tg.MainButton.enable();
+}
+function send(obj){
+  const json = JSON.stringify(obj);
+  if (tg){ tg.sendData(json); tg.close(); }
+  else { alert("Fora do Telegram:\n" + json); }
+}
+function fail(msg){
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
+  if (tg) tg.showAlert(msg); else alert(msg);
+}
+function num(v){ return String(v == null ? "" : v).trim(); }
+
+/* ================= TELAS DE REGISTRO ================= */
+
+function telaReceita(){
+  h(header("🟢","Nova Receita","Dinheiro entrando") +
+    field("Valor", `<input id="valor" inputmode="decimal" placeholder="Ex: 1500">`) +
+    field("Conta de destino", `<select id="conta">${opts(CONTAS,"Inter")}</select>`) +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Descrição", `<input id="descricao" placeholder="Origem da receita">`));
+  setSubmit("💾 Registrar receita", () => {
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    if (!num(el("descricao").value)) return fail("Informe a descrição.");
+    send({action:"receita", valor:el("valor").value, conta:el("conta").value,
+      categoria:el("categoria").value, descricao:el("descricao").value});
+  });
+}
+
+function telaDebito(){
+  h(header("🔴","Novo Débito","Gasto avulso") +
+    field("Valor", `<input id="valor" inputmode="decimal" placeholder="Ex: 15,50">`) +
+    field("Conta de saída", `<select id="conta">${opts(CONTAS,"Inter")}</select>`) +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Descrição", `<input id="descricao" placeholder="O que comprou?">`));
+  setSubmit("💾 Registrar débito", () => {
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    if (!num(el("descricao").value)) return fail("Informe a descrição.");
+    send({action:"debito", valor:el("valor").value, conta:el("conta").value,
+      categoria:el("categoria").value, descricao:el("descricao").value});
+  });
+}
+
+function telaCartao(){
+  h(header("💳","Compra no Cartão","Crédito / parcelado") +
+    field("Valor total", `<input id="valor" inputmode="decimal" placeholder="Ex: 299,90">`) +
+    `<div class="row">` +
+      field("Cartão", `<select id="cartao">${opts(CARTOES,"Inter")}</select>`) +
+      field("Parcelas", `<input id="parcelas" inputmode="numeric" value="1">`) +
+    `</div>` +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Descrição", `<input id="descricao" placeholder="O que comprou?">`));
+  setSubmit("💾 Registrar compra", () => {
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    if (!num(el("descricao").value)) return fail("Informe a descrição.");
+    send({action:"cartao", valor:el("valor").value, cartao:el("cartao").value,
+      parcelas:el("parcelas").value || "1", categoria:el("categoria").value,
+      descricao:el("descricao").value});
+  });
+}
+
+function telaPix(){
+  h(header("🔁","PIX Parcelado","Compra parcelada via PIX") +
+    field("Valor total", `<input id="valor" inputmode="decimal" placeholder="Ex: 500">`) +
+    `<div class="row">` +
+      field("Entrada", `<input id="entrada" inputmode="decimal" value="0">`) +
+      field("Parcelas pagas", `<input id="pagas" inputmode="numeric" value="1">`) +
+    `</div>` +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Descrição", `<input id="descricao" placeholder="Detalhes">`));
+  setSubmit("💾 Registrar PIX", () => {
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    if (!num(el("descricao").value)) return fail("Informe a descrição.");
+    send({action:"pix", valor:el("valor").value, entrada:el("entrada").value || "0",
+      pagas:el("pagas").value || "1", categoria:el("categoria").value,
+      descricao:el("descricao").value});
+  });
+}
+
+function telaWishlist(){
+  h(header("⭐","Nova Wishlist","Item que você deseja") +
+    field("Preço", `<input id="preco" inputmode="decimal" placeholder="Ex: 199,90">`) +
+    field("Nome", `<input id="nome" placeholder="O que você quer?">`) +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Prioridade", `<select id="prioridade">${opts(PRIORIDADES,"Media")}</select>`));
+  setSubmit("💾 Adicionar à wishlist", () => {
+    if (!num(el("preco").value)) return fail("Informe o preço.");
+    if (!num(el("nome").value)) return fail("Informe o nome.");
+    send({action:"wishlist", preco:el("preco").value, nome:el("nome").value,
+      categoria:el("categoria").value, prioridade:el("prioridade").value});
+  });
+}
+
+function telaInvest(){
+  h(header("📈","Novo Investimento","Aporte ou saque") +
+    field("Tipo", `<input id="tipo" placeholder="Ex: Renda Fixa, Cripto">`) +
+    field("Operação", `<select id="operacao"><option>Aporte</option><option>Saque</option></select>`) +
+    `<div class="row">` +
+      field("Valor", `<input id="valor" inputmode="decimal" placeholder="Ex: 1000">`) +
+      field("Qtd. cripto", `<input id="qtd" inputmode="decimal" value="0">`) +
+    `</div>`);
+  setSubmit("💾 Registrar investimento", () => {
+    if (!num(el("tipo").value)) return fail("Informe o tipo.");
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    send({action:"invest", tipo:el("tipo").value, operacao:el("operacao").value,
+      valor:el("valor").value, qtd_cripto:el("qtd").value || "0"});
+  });
+}
+
+function telaAssinatura(){
+  h(header("🔔","Nova Assinatura","Cobrança recorrente mensal") +
+    field("Nome", `<input id="nome" placeholder="Ex: Netflix">`) +
+    `<div class="row">` +
+      field("Valor mensal", `<input id="valor" inputmode="decimal" placeholder="Ex: 39,90">`) +
+      field("Dia da cobrança", `<input id="dia" inputmode="numeric" placeholder="15">`) +
+    `</div>` +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS,"Assinaturas")}</select>`) +
+    field("Cartão", `<select id="cartao">${opts(CARTOES,"Inter")}</select>`));
+  setSubmit("💾 Criar assinatura", () => {
+    if (!num(el("nome").value)) return fail("Informe o nome.");
+    if (!num(el("valor").value)) return fail("Informe o valor.");
+    if (!num(el("dia").value)) return fail("Informe o dia da cobrança.");
+    send({action:"assinatura", nome:el("nome").value, valor:el("valor").value,
+      dia:el("dia").value, categoria:el("categoria").value, cartao:el("cartao").value});
+  });
+}
+
+function telaFatura(){
+  h(header("📅","Atualizar Fatura","Último ciclo pago de um cartão") +
+    field("Cartão", `<select id="cartao">${opts(CARTOES,"Inter")}</select>`) +
+    field("Novo último ciclo pago", `<input id="data" placeholder="Ex: 01/07/2026">`) +
+    `<div class="hint-line">Data no formato dia/mês/ano.</div>`);
+  setSubmit("💾 Atualizar fatura", () => {
+    if (!num(el("data").value)) return fail("Informe a nova data.");
+    send({action:"fatura", cartao:el("cartao").value, nova_data:el("data").value});
+  });
+}
+
+/* ================= TELAS COM DADOS DINAMICOS ================= */
+
+function telaPixEditar(data){
+  const compras = Array.isArray(data) ? data : [];
+  if (!compras.length){
+    h(header("🔁","Editar PIX") + `<div class="empty">📭 Nenhuma compra PIX encontrada.</div>`);
+    return;
+  }
+  let selId = null;
+  const lista = compras.map(c => `
+    <div class="list-item" data-id="${c.id}">
+      <div class="info">
+        <div class="name">#${c.id} · ${c.descricao}</div>
+        <div class="meta">Total R$ ${c.valor} · ${c.pagas} pagas</div>
+      </div>
+    </div>`).join("");
+  h(header("🔁","Editar PIX","Escolha a compra e informe as parcelas pagas") +
+    lista +
+    field("Novo total de parcelas pagas", `<input id="qtd" inputmode="numeric" placeholder="Ex: 3">`));
+  document.querySelectorAll(".list-item").forEach(node => {
+    node.onclick = () => {
+      document.querySelectorAll(".list-item").forEach(n => n.classList.remove("sel"));
+      node.classList.add("sel");
+      selId = node.getAttribute("data-id");
+    };
+  });
+  setSubmit("💾 Atualizar parcelas", () => {
+    if (!selId) return fail("Selecione uma compra PIX.");
+    if (!num(el("qtd").value)) return fail("Informe as parcelas pagas.");
+    send({action:"pix_editar", id:selId, qtd:el("qtd").value});
+  });
+}
+
+function telaAssToggle(data){
+  const assinaturas = Array.isArray(data) ? data : [];
+  if (!assinaturas.length){
+    h(header("🔄","Ativar / Desativar") + `<div class="empty">📭 Nenhuma assinatura encontrada.</div>`);
+    return;
+  }
+  let sel = null;
+  const lista = assinaturas.map(a => `
+    <div class="list-item" data-id="${a.id}" data-nome="${encodeURIComponent(a.nome)}" data-ativa="${a.ativa?1:0}">
+      <div class="emoji">${a.ativa ? "🟢" : "⚪"}</div>
+      <div class="info">
+        <div class="name">${a.nome}</div>
+        <div class="meta">R$ ${a.valor}</div>
+      </div>
+      <div class="toggle-badge ${a.ativa?"on":"off"}">${a.ativa ? "Ativa" : "Inativa"}</div>
+    </div>`).join("");
+  h(header("🔄","Ativar / Desativar","Toque para alternar o estado da assinatura") + lista);
+  document.querySelectorAll(".list-item").forEach(node => {
+    node.onclick = () => {
+      document.querySelectorAll(".list-item").forEach(n => n.classList.remove("sel"));
+      node.classList.add("sel");
+      sel = node;
+      const ativa = node.getAttribute("data-ativa") === "1";
+      setSubmit(ativa ? "⚪ Desativar assinatura" : "🟢 Ativar assinatura", enviar);
+    };
+  });
+  function enviar(){
+    if (!sel) return fail("Selecione uma assinatura.");
+    const ativaAtual = sel.getAttribute("data-ativa") === "1";
+    send({action:"ass_toggle", id:sel.getAttribute("data-id"),
+      nome:decodeURIComponent(sel.getAttribute("data-nome")), ativa:!ativaAtual});
+  }
+}
+
+/* ================= SQL ================= */
+
+function telaSql(){
+  h(header("🗄️","Console SQL","Query direto no PostgreSQL — o resultado volta como imagem") +
+    field("Query", `<textarea id="query" placeholder="SELECT * FROM compras_cartao ORDER BY id DESC LIMIT 5"></textarea>`) +
+    field("Limite de linhas (SELECT)", `<input id="limite" inputmode="numeric" value="20">`));
+  setSubmit("▶️ Executar query", () => {
+    if (!num(el("query").value)) return fail("Digite uma query.");
+    send({action:"sql", query:el("query").value, limite:el("limite").value || "20"});
+  });
+}
+
+/* ================= ROTEADOR ================= */
+
+const ROTAS = {
+  receita: telaReceita, debito: telaDebito, cartao: telaCartao, pix: telaPix,
+  wishlist: telaWishlist, invest: telaInvest, assinatura: telaAssinatura,
+  fatura: telaFatura, pixedit: telaPixEditar, asstoggle: telaAssToggle, sql: telaSql,
+};
+
+function boot(){
+  if (tg){ tg.ready(); tg.expand(); }
+  const { screen, data } = decodePayload();
+  const rota = ROTAS[screen] || telaReceita;
+  rota(data);
+  if (tg){ tg.MainButton.onClick(() => { if (submitFn) submitFn(); }); }
+}
+boot();
+window.addEventListener("hashchange", boot);
+</script>
+</body>
+</html>
