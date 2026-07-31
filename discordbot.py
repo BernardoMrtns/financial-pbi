@@ -291,11 +291,6 @@ async def painel_cmd(interaction: discord.Interaction):
 # ==========================================
 
 
-# Largura-alvo (em caracteres) do bloco de código no Discord. Acima disso a
-# tabela quebraria de linha, então trocamos para o formato vertical.
-SQL_LARGURA_MAX = 62
-
-
 def _sanitizar_valor(valor, largura_max: int | None = None) -> str:
     """Converte um valor de célula em texto de uma linha, opcionalmente truncado."""
     texto = "NULL" if valor is None else str(valor)
@@ -313,7 +308,7 @@ def _reordenar_colunas(colunas: list[str]) -> list[str]:
 
 
 def _formatar_tabela_sql(colunas: list[str], linhas: list[dict], largura_max: int = 24) -> str:
-    """Monta uma tabela ASCII a partir das linhas retornadas por um SELECT."""
+    """Tabela ASCII — usada só como fallback caso a renderização de imagem falhe."""
     if not linhas:
         return "(0 linhas)"
 
@@ -331,20 +326,86 @@ def _formatar_tabela_sql(colunas: list[str], linhas: list[dict], largura_max: in
     return f"{cabecalho}\n{separador}\n{corpo}"
 
 
-def _formatar_registros_vertical(colunas: list[str], linhas: list[dict]) -> str:
-    """Formato vertical (estilo psql \\x): um bloco rotulado por registro. Nunca quebra."""
-    if not linhas:
-        return "(0 linhas)"
+def _renderizar_tabela_imagem(colunas: list[str], linhas: list[dict]) -> discord.File:
+    """Renderiza as linhas de um SELECT como imagem PNG (tema escuro, estilo Discord)."""
+    import io
 
-    largura_rotulo = max(len(str(col)) for col in colunas)
-    blocos = []
-    for i, linha in enumerate(linhas, start=1):
-        campos = "\n".join(
-            f"{str(col).ljust(largura_rotulo)}  {_sanitizar_valor(linha.get(col))}"
-            for col in colunas
+    from PIL import Image, ImageDraw, ImageFont
+
+    def _fonte(tam: int, bold: bool = False):
+        candidatos = (
+            ["C:/Windows/Fonts/consolab.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"]
+            if bold
+            else ["C:/Windows/Fonts/consola.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"]
         )
-        blocos.append(f"──── linha {i} ────\n{campos}")
-    return "\n\n".join(blocos)
+        for caminho in candidatos:
+            try:
+                return ImageFont.truetype(caminho, tam)
+            except OSError:
+                continue
+        return ImageFont.load_default(tam)
+
+    fonte = _fonte(20)
+    fonte_bold = _fonte(20, bold=True)
+
+    BG, HEADER_BG, ROW_ALT = (30, 31, 34), (43, 45, 49), (35, 36, 40)
+    TXT, TXT_HEAD, ACCENT, GRID = (219, 222, 225), (255, 255, 255), (88, 101, 242), (55, 57, 62)
+    PAD_X, PAD_Y, MARGEM = 14, 10, 16
+
+    medidor = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+
+    def _largura(txt: str, ft) -> int:
+        return medidor.textbbox((0, 0), txt, font=ft)[2]
+
+    larguras = {}
+    for col in colunas:
+        w = _largura(str(col), fonte_bold)
+        for linha in linhas:
+            w = max(w, _largura(_sanitizar_valor(linha.get(col)), fonte))
+        larguras[col] = w + PAD_X * 2
+
+    alt_linha = fonte.getbbox("Ag")[3] + PAD_Y * 2
+    larg_total = sum(larguras.values())
+    alt_total = alt_linha * (len(linhas) + 1)
+
+    img = Image.new("RGB", (larg_total + MARGEM * 2, alt_total + MARGEM * 2), BG)
+    d = ImageDraw.Draw(img)
+    x0, y0 = MARGEM, MARGEM
+
+    # Cabeçalho + linha de destaque
+    d.rectangle([x0, y0, x0 + larg_total, y0 + alt_linha], fill=HEADER_BG)
+    cx = x0
+    for col in colunas:
+        d.text((cx + PAD_X, y0 + PAD_Y), str(col), font=fonte_bold, fill=TXT_HEAD)
+        cx += larguras[col]
+    d.rectangle([x0, y0 + alt_linha - 2, x0 + larg_total, y0 + alt_linha], fill=ACCENT)
+
+    # Linhas (com zebra e 'id' destacado)
+    for i, linha in enumerate(linhas):
+        ry = y0 + alt_linha * (i + 1)
+        if i % 2 == 1:
+            d.rectangle([x0, ry, x0 + larg_total, ry + alt_linha], fill=ROW_ALT)
+        cx = x0
+        for col in colunas:
+            eh_id = col == "id"
+            d.text(
+                (cx + PAD_X, ry + PAD_Y),
+                _sanitizar_valor(linha.get(col)),
+                font=fonte_bold if eh_id else fonte,
+                fill=ACCENT if eh_id else TXT,
+            )
+            cx += larguras[col]
+
+    # Grade vertical sutil entre colunas
+    cx = x0
+    for col in colunas[:-1]:
+        cx += larguras[col]
+        d.line([cx, y0, cx, y0 + alt_total], fill=GRID, width=1)
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return discord.File(buffer, filename="resultado.png")
 
 
 def _montar_resposta_sql(resultado: dict, limite: int = 20):
@@ -360,24 +421,26 @@ def _montar_resposta_sql(resultado: dict, limite: int = 20):
     total = len(linhas)
     exibidas = linhas[: max(1, limite)]
 
-    # Tabela compacta se couber na largura; senão, formato vertical (não quebra).
-    tabela = _formatar_tabela_sql(colunas, exibidas)
-    maior_linha = max((len(l) for l in tabela.splitlines()), default=0)
-    saida = tabela if maior_linha <= SQL_LARGURA_MAX else _formatar_registros_vertical(colunas, exibidas)
+    if not exibidas:
+        return "📊 0 linha(s).", None
 
-    rodape = f"\n\n📊 {total} linha(s)"
+    rodape = f"📊 {total} linha(s)"
     if total > len(exibidas):
         rodape += f" — exibindo as primeiras {len(exibidas)}"
 
-    corpo = f"```\n{saida}\n```{rodape}"
-    if len(corpo) > 1990:
-        # Estoura o limite do Discord: manda como arquivo anexo.
-        import io
+    # Resultado sempre como imagem; se a renderização falhar, cai para texto.
+    try:
+        return rodape, _renderizar_tabela_imagem(colunas, exibidas)
+    except Exception as e:
+        logger.warning("Falha ao renderizar imagem do /sql, usando texto: %s", e)
+        tabela = _formatar_tabela_sql(colunas, exibidas)
+        corpo = f"```\n{tabela}\n```\n\n{rodape}"
+        if len(corpo) > 1990:
+            import io
 
-        arquivo = discord.File(io.BytesIO(saida.encode("utf-8")), filename="resultado.txt")
-        return f"📊 {total} linha(s) — resultado grande, veja o anexo.", arquivo
-
-    return corpo, None
+            arquivo = discord.File(io.BytesIO(tabela.encode("utf-8")), filename="resultado.txt")
+            return rodape, arquivo
+        return corpo, None
 
 
 @bot.tree.command(name="sql", description="Executa uma query SQL direto no banco (PostgreSQL)")
@@ -691,8 +754,16 @@ async def on_message(message: discord.Message):
     # Se for o webhook, limpa a tag "[APPLEPAY] " para entregar o texto puro para a IA
     texto_processar = message.content.replace("[APPLEPAY] ", "") if is_apple_pay_webhook else message.content
 
+    # Guarda anti-ruído: ignora mensagens triviais (ex: "a" digitado sem querer)
+    # antes de gastar uma chamada de IA. O Apple Pay sempre traz comerciante + valor,
+    # então nunca é bloqueado aqui.
+    if len(texto_processar.strip()) < 3:
+        if is_authorized_user:
+            await message.reply("❌ Mensagem muito curta para registrar. Ex: `50 mercado`.")
+        return
+
     status_msg = await message.reply("🧠 Interpretando registro...")
-    
+
     # Chama a IA usando a string limpa
     dados_ia = interpretar_gasto_com_ia(texto_processar)
 
@@ -705,7 +776,17 @@ async def on_message(message: discord.Message):
 
     if tipo_transacao == "invalido":
         await status_msg.edit(
-            content="❌ Injeção bloqueada! Sou um bot financeiro, não converso sobre outros assuntos. 💸"
+            content="❌ Não identifiquei uma transação válida nessa mensagem. Nada foi gravado. 💸"
+        )
+        return
+
+    # Backstop: sem valor positivo não gravamos (evita registros "fantasma" de R$ 0,00).
+    # Wishlist é exceção — o preço pode ser desconhecido no momento.
+    valor_ia = dados_ia.get("valor") or 0
+    if tipo_transacao != "wishlist" and valor_ia <= 0:
+        await status_msg.edit(
+            content="❌ Não identifiquei um valor válido. Nada foi gravado. "
+            "Ex: `50 mercado` ou `recebi 1200 salário`."
         )
         return
 
