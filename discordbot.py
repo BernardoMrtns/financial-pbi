@@ -449,10 +449,12 @@ def _montar_resposta_sql(resultado: dict, limite: int = 20):
     limite="Máximo de linhas exibidas (SELECT). Padrão: 20",
 )
 async def sql_cmd(interaction: discord.Interaction, query: str, limite: int = 20):
-    await interaction.response.defer(ephemeral=True, thinking=True)
+    # Não-ephemeral de propósito: mensagens ephemeral não carregam anexos de imagem
+    # no mobile (limitação da API do Discord). Servidor é privado, então tudo bem.
+    await interaction.response.defer(thinking=True)
     conteudo, arquivo = _montar_resposta_sql(executar_sql_livre(query), limite)
-    await interaction.followup.send(conteudo, file=arquivo, ephemeral=True) if arquivo else \
-        await interaction.followup.send(conteudo, ephemeral=True)
+    await interaction.followup.send(conteudo, file=arquivo) if arquivo else \
+        await interaction.followup.send(conteudo)
 
 
 # ==========================================
