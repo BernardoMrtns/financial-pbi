@@ -143,6 +143,30 @@ def atualizar_registro_db(nome_aba: str, coluna_chave: str, valor_chave: any, da
     except Exception as e:
         logger.error(f"Erro ao atualizar {tabela} no PostgreSQL: {e}")
 
+def executar_sql_livre(query: str) -> dict:
+    """Executa uma query SQL arbitrária no PostgreSQL.
+
+    ATENÇÃO: NÃO há sandbox nem validação. Permite qualquer comando (incluindo
+    UPDATE/DELETE/DROP). Só deve ser exposto ao usuário autorizado (dono do bot),
+    o que já é garantido pela trava global `RestrictedTree` no discordbot.
+
+    Retorna um dict:
+      - SELECT / RETURNING: {"ok": True, "tipo": "select", "colunas": [...], "linhas": [...]}
+      - INSERT/UPDATE/DELETE/DDL: {"ok": True, "tipo": "exec", "rowcount": N}
+      - Erro: {"ok": False, "erro": "mensagem"}
+    """
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text(query))
+            if result.returns_rows:
+                colunas = list(result.keys())
+                linhas = [dict(row) for row in result.mappings().fetchall()]
+                return {"ok": True, "tipo": "select", "colunas": colunas, "linhas": linhas}
+            return {"ok": True, "tipo": "exec", "rowcount": result.rowcount}
+    except Exception as e:
+        logger.error(f"Erro ao executar SQL livre: {e}")
+        return {"ok": False, "erro": str(e)}
+
 def ler_tabela_db(nome_aba: str) -> pd.DataFrame:
     """Lê uma tabela inteira do PostgreSQL e retorna como DataFrame."""
     tabela = TABELAS_MAP.get(nome_aba)

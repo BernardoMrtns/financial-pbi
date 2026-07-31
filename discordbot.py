@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from config import DISCORD_AUTHORIZED_USER_ID, DISCORD_TOKEN
 from services.ai_parser import interpretar_gasto_com_ia
-from services.database import atualizar_registro_db, ler_tabela_db
+from services.database import atualizar_registro_db, executar_sql_livre, ler_tabela_db
 from services.google_sheets import atualizar_registro_sheets, conectar_google_sheets
 from ui.constants import (
     CARTOES,
@@ -284,6 +284,76 @@ CHOICES_PRIORIDADE = _choices(PRIORIDADES)
 @bot.tree.command(name="painel", description="Abre o painel financeiro interativo")
 async def painel_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(embed=painel_embed(), view=PainelView())
+
+
+# ==========================================
+#         SQL (CONSOLE DIRETO NO BANCO)
+# ==========================================
+
+
+def _formatar_tabela_sql(colunas: list[str], linhas: list[dict], largura_max: int = 24) -> str:
+    """Monta uma tabela ASCII a partir das linhas retornadas por um SELECT."""
+    if not linhas:
+        return "(0 linhas)"
+
+    def _cel(valor) -> str:
+        texto = "NULL" if valor is None else str(valor)
+        texto = texto.replace("\n", " ").replace("\r", " ")
+        return texto if len(texto) <= largura_max else texto[: largura_max - 1] + "…"
+
+    larguras = {col: len(str(col)) for col in colunas}
+    for linha in linhas:
+        for col in colunas:
+            larguras[col] = max(larguras[col], len(_cel(linha.get(col))))
+
+    cabecalho = " | ".join(str(col).ljust(larguras[col]) for col in colunas)
+    separador = "-+-".join("-" * larguras[col] for col in colunas)
+    corpo = "\n".join(
+        " | ".join(_cel(linha.get(col)).ljust(larguras[col]) for col in colunas)
+        for linha in linhas
+    )
+    return f"{cabecalho}\n{separador}\n{corpo}"
+
+
+def _montar_resposta_sql(resultado: dict, limite: int = 20):
+    """Transforma o retorno de `executar_sql_livre` em (conteudo, arquivo) para o Discord."""
+    if not resultado["ok"]:
+        return f"❌ Erro ao executar a query:\n```\n{resultado['erro'][:1800]}\n```", None
+
+    if resultado["tipo"] == "exec":
+        return f"✅ Executado com sucesso. Linhas afetadas: **{resultado['rowcount']}**", None
+
+    colunas = resultado["colunas"]
+    linhas = resultado["linhas"]
+    total = len(linhas)
+    exibidas = linhas[: max(1, limite)]
+
+    tabela = _formatar_tabela_sql(colunas, exibidas)
+    rodape = f"\n\n📊 {total} linha(s)"
+    if total > len(exibidas):
+        rodape += f" — exibindo as primeiras {len(exibidas)}"
+
+    corpo = f"```\n{tabela}\n```{rodape}"
+    if len(corpo) > 1990:
+        # Estoura o limite do Discord: manda como arquivo anexo.
+        import io
+
+        arquivo = discord.File(io.BytesIO(tabela.encode("utf-8")), filename="resultado.txt")
+        return f"📊 {total} linha(s) — resultado grande, veja o anexo.", arquivo
+
+    return corpo, None
+
+
+@bot.tree.command(name="sql", description="Executa uma query SQL direto no banco (PostgreSQL)")
+@app_commands.describe(
+    query="Query SQL a executar. Ex: SELECT * FROM compras_cartao ORDER BY id DESC LIMIT 5",
+    limite="Máximo de linhas exibidas (SELECT). Padrão: 20",
+)
+async def sql_cmd(interaction: discord.Interaction, query: str, limite: int = 20):
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    conteudo, arquivo = _montar_resposta_sql(executar_sql_livre(query), limite)
+    await interaction.followup.send(conteudo, file=arquivo, ephemeral=True) if arquivo else \
+        await interaction.followup.send(conteudo, ephemeral=True)
 
 
 # ==========================================
@@ -564,6 +634,18 @@ async def on_message(message: discord.Message):
     is_apple_pay_webhook = bool(message.webhook_id and message.content.startswith("[APPLEPAY]"))
 
     if not (is_authorized_user or is_apple_pay_webhook):
+        return
+
+    # Console SQL em texto livre: "/sql SELECT * FROM compras_cartao ORDER BY id DESC LIMIT 5"
+    # (o slash command nativo abre um campo separado; aqui aceitamos a query na mesma linha).
+    if is_authorized_user and message.content.lower().startswith("/sql "):
+        query = message.content[len("/sql "):].strip()
+        if not query:
+            await message.reply("⚠️ Use: `/sql SELECT * FROM tabela LIMIT 5`")
+            return
+        async with message.channel.typing():
+            conteudo, arquivo = _montar_resposta_sql(executar_sql_livre(query))
+        await message.reply(conteudo, file=arquivo) if arquivo else await message.reply(conteudo)
         return
 
     # Ignora comandos de barra e mensagens vazias (anexos puros).
