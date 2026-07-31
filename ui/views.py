@@ -177,7 +177,7 @@ class PainelView(AuthorizedView):
         await acao(interaction)
 
     @discord.ui.button(
-        label="Limpar DM",
+        label="Limpar Chat",
         emoji="🧹",
         style=discord.ButtonStyle.danger,
         custom_id="painel:clear",

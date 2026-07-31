@@ -92,7 +92,7 @@ class FinancialBot(commands.Bot):
         registrar_acao_painel("assinatura_toggle", _abrir_assinatura_toggle_menu)
         registrar_acao_painel("status", _enviar_status)
         registrar_acao_painel("run_script", _executar_pipeline)
-        registrar_acao_painel("clear", _limpar_dm_chat)
+        registrar_acao_painel("clear", _limpar_chat)
         await self.tree.sync()
         logger.info("UI sincronizada e painel persistente registrado.")
 
@@ -234,28 +234,30 @@ async def _executar_pipeline(interaction: discord.Interaction):
         )
 
 
-async def _limpar_dm_chat(interaction: discord.Interaction):
-    channel = interaction.channel
-    if not isinstance(channel, discord.DMChannel):
-        await interaction.response.send_message(
-            "⚠️ O comando /clear só funciona em conversa direta (DM).", ephemeral=True
-        )
-        return
+async def _limpar_chat(interaction: discord.Interaction):
+    """Apaga as mensagens do próprio bot no canal atual (DM ou servidor).
 
+    Deletar as próprias mensagens não exige `manage_messages`, então funciona em
+    qualquer canal privado. A mensagem do painel (de onde veio o clique) é
+    preservada para os botões não sumirem.
+    """
     await interaction.response.defer(ephemeral=True, thinking=True)
 
+    canal = interaction.channel
+    painel_id = interaction.message.id if interaction.message else None
+
     apagadas = 0
-    async for mensagem in channel.history(limit=200):
-        if mensagem.author != bot.user:
+    async for mensagem in canal.history(limit=200):
+        if mensagem.author != bot.user or mensagem.id == painel_id:
             continue
         try:
             await mensagem.delete()
             apagadas += 1
         except discord.HTTPException:
-            logger.warning("Nao foi possivel apagar uma mensagem do bot na DM.")
+            logger.warning("Nao foi possivel apagar uma mensagem do bot.")
 
     await interaction.followup.send(
-        f"🧹 Limpei {apagadas} mensagem(ns) minhas nesta DM.",
+        f"🧹 Limpei {apagadas} mensagem(ns) minhas neste canal.",
         ephemeral=True,
     )
 
@@ -671,9 +673,9 @@ async def ass_toggle_cmd(interaction: discord.Interaction):
     )
 
 
-@bot.tree.command(name="clear", description="Limpa a conversa desta DM")
+@bot.tree.command(name="clear", description="Apaga as mensagens do bot neste canal (ou DM)")
 async def clear_cmd(interaction: discord.Interaction):
-    await _limpar_dm_chat(interaction)
+    await _limpar_chat(interaction)
 
 
 # ==========================================
