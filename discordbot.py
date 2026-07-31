@@ -291,28 +291,60 @@ async def painel_cmd(interaction: discord.Interaction):
 # ==========================================
 
 
+# Largura-alvo (em caracteres) do bloco de código no Discord. Acima disso a
+# tabela quebraria de linha, então trocamos para o formato vertical.
+SQL_LARGURA_MAX = 62
+
+
+def _sanitizar_valor(valor, largura_max: int | None = None) -> str:
+    """Converte um valor de célula em texto de uma linha, opcionalmente truncado."""
+    texto = "NULL" if valor is None else str(valor)
+    texto = texto.replace("\n", " ").replace("\r", " ")
+    if largura_max is not None and len(texto) > largura_max:
+        texto = texto[: largura_max - 1] + "…"
+    return texto
+
+
+def _reordenar_colunas(colunas: list[str]) -> list[str]:
+    """Move a coluna 'id' (se existir) para o início — chave mais útil primeiro."""
+    if "id" in colunas:
+        return ["id"] + [c for c in colunas if c != "id"]
+    return colunas
+
+
 def _formatar_tabela_sql(colunas: list[str], linhas: list[dict], largura_max: int = 24) -> str:
     """Monta uma tabela ASCII a partir das linhas retornadas por um SELECT."""
     if not linhas:
         return "(0 linhas)"
 
-    def _cel(valor) -> str:
-        texto = "NULL" if valor is None else str(valor)
-        texto = texto.replace("\n", " ").replace("\r", " ")
-        return texto if len(texto) <= largura_max else texto[: largura_max - 1] + "…"
-
     larguras = {col: len(str(col)) for col in colunas}
     for linha in linhas:
         for col in colunas:
-            larguras[col] = max(larguras[col], len(_cel(linha.get(col))))
+            larguras[col] = max(larguras[col], len(_sanitizar_valor(linha.get(col), largura_max)))
 
     cabecalho = " | ".join(str(col).ljust(larguras[col]) for col in colunas)
     separador = "-+-".join("-" * larguras[col] for col in colunas)
     corpo = "\n".join(
-        " | ".join(_cel(linha.get(col)).ljust(larguras[col]) for col in colunas)
+        " | ".join(_sanitizar_valor(linha.get(col), largura_max).ljust(larguras[col]) for col in colunas)
         for linha in linhas
     )
     return f"{cabecalho}\n{separador}\n{corpo}"
+
+
+def _formatar_registros_vertical(colunas: list[str], linhas: list[dict]) -> str:
+    """Formato vertical (estilo psql \\x): um bloco rotulado por registro. Nunca quebra."""
+    if not linhas:
+        return "(0 linhas)"
+
+    largura_rotulo = max(len(str(col)) for col in colunas)
+    blocos = []
+    for i, linha in enumerate(linhas, start=1):
+        campos = "\n".join(
+            f"{str(col).ljust(largura_rotulo)}  {_sanitizar_valor(linha.get(col))}"
+            for col in colunas
+        )
+        blocos.append(f"──── linha {i} ────\n{campos}")
+    return "\n\n".join(blocos)
 
 
 def _montar_resposta_sql(resultado: dict, limite: int = 20):
@@ -323,22 +355,26 @@ def _montar_resposta_sql(resultado: dict, limite: int = 20):
     if resultado["tipo"] == "exec":
         return f"✅ Executado com sucesso. Linhas afetadas: **{resultado['rowcount']}**", None
 
-    colunas = resultado["colunas"]
+    colunas = _reordenar_colunas(resultado["colunas"])
     linhas = resultado["linhas"]
     total = len(linhas)
     exibidas = linhas[: max(1, limite)]
 
+    # Tabela compacta se couber na largura; senão, formato vertical (não quebra).
     tabela = _formatar_tabela_sql(colunas, exibidas)
+    maior_linha = max((len(l) for l in tabela.splitlines()), default=0)
+    saida = tabela if maior_linha <= SQL_LARGURA_MAX else _formatar_registros_vertical(colunas, exibidas)
+
     rodape = f"\n\n📊 {total} linha(s)"
     if total > len(exibidas):
         rodape += f" — exibindo as primeiras {len(exibidas)}"
 
-    corpo = f"```\n{tabela}\n```{rodape}"
+    corpo = f"```\n{saida}\n```{rodape}"
     if len(corpo) > 1990:
         # Estoura o limite do Discord: manda como arquivo anexo.
         import io
 
-        arquivo = discord.File(io.BytesIO(tabela.encode("utf-8")), filename="resultado.txt")
+        arquivo = discord.File(io.BytesIO(saida.encode("utf-8")), filename="resultado.txt")
         return f"📊 {total} linha(s) — resultado grande, veja o anexo.", arquivo
 
     return corpo, None
