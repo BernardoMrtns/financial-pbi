@@ -4,6 +4,7 @@ Responsavel apenas pela inicializacao, seguranca global e roteamento. Toda a
 logica de interface (Views, Modals, Selects) vive no pacote `ui`.
 """
 
+import asyncio
 import os
 import subprocess
 import sys
@@ -15,7 +16,7 @@ from discord.ext import commands
 
 from config import DISCORD_AUTHORIZED_USER_ID, DISCORD_TOKEN
 from services.ai_parser import interpretar_gasto_com_ia
-from services.database import atualizar_registro_db, executar_sql_livre, ler_tabela_db
+from database import atualizar_registro_db, executar_sql_livre, ler_tabela_db
 from services.google_sheets import atualizar_registro_sheets, conectar_google_sheets
 from ui.constants import (
     CARTOES,
@@ -42,6 +43,10 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 spreadsheet = None
+
+# Raiz do projeto (este arquivo agora vive em bots/, entao subimos um nivel).
+PROJETO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MAIN_SCRIPT = os.path.join(PROJETO_ROOT, "main.py")
 
 # ==========================================
 #         SEGURANCA GLOBAL (TREE)
@@ -122,7 +127,8 @@ async def on_app_command_error(
 async def on_ready():
     global spreadsheet
     logger.info("A ligar ao ecossistema Google...")
-    spreadsheet = conectar_google_sheets()
+    # to_thread para nao bloquear o loop (compartilhado com o Telegram no modo combinado).
+    spreadsheet = await asyncio.to_thread(conectar_google_sheets)
     logger.info("Bot logado como %s!", bot.user)
 
 
@@ -197,16 +203,35 @@ async def _abrir_assinatura_toggle_menu(interaction: discord.Interaction):
     )
 
 
+def _telemetria() -> str:
+    ram = subprocess.check_output(
+        "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
+    ).decode().strip()
+    disco = subprocess.check_output(
+        "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
+    ).decode().strip()
+    return f"🖥️ **Saúde do Servidor:**\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+
+
+async def _rodar_etl_e_reportar(enviar) -> None:
+    """Executa main.py de forma assincrona e reporta via callback `enviar(texto)`."""
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, MAIN_SCRIPT, cwd=PROJETO_ROOT,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0:
+        await enviar("✅ Pipeline de Fluxo de Caixa concluída com sucesso!")
+    else:
+        out = (stderr or stdout or b"").decode(errors="replace").strip()
+        logger.error("run_script falhou: %s", out)
+        await enviar(f"❌ Falha na execução do script principal.\n```\n{(out or 'Erro desconhecido')[:1500]}\n```")
+
+
 async def _enviar_status(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True, thinking=True)
     try:
-        ram = subprocess.check_output(
-            "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
-        ).decode().strip()
-        disco = subprocess.check_output(
-            "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
-        ).decode().strip()
-        msg = f"🖥️ **Saúde do Servidor:**\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+        msg = await asyncio.to_thread(_telemetria)
         await interaction.followup.send(msg, ephemeral=True)
     except Exception:
         await interaction.followup.send("⚠️ Erro ao obter telemetria.", ephemeral=True)
@@ -214,24 +239,7 @@ async def _enviar_status(interaction: discord.Interaction):
 
 async def _executar_pipeline(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True, thinking=True)
-
-    projeto_root = os.path.dirname(os.path.abspath(__file__))
-    main_script = os.path.join(projeto_root, "main.py")
-
-    res = subprocess.run(
-        [sys.executable, main_script],
-        cwd=projeto_root,
-        capture_output=True,
-        text=True,
-    )
-    if res.returncode == 0:
-        await interaction.followup.send("✅ Pipeline de Fluxo de Caixa concluída com sucesso!", ephemeral=True)
-    else:
-        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
-        detalhe_erro = (res.stderr or res.stdout or "Erro desconhecido").strip()
-        await interaction.followup.send(
-            f"❌ Falha na execução do script principal.\n```\n{detalhe_erro[:1500]}\n```", ephemeral=True
-        )
+    await _rodar_etl_e_reportar(lambda t: interaction.followup.send(t, ephemeral=True))
 
 
 async def _limpar_chat(interaction: discord.Interaction):
@@ -707,24 +715,7 @@ async def status_cmd(interaction: discord.Interaction):
 @bot.tree.command(name="run_script", description="Recalcular todo o Fluxo de Caixa via ETL")
 async def run_script_cmd(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True, thinking=True)
-
-    projeto_root = os.path.dirname(os.path.abspath(__file__))
-    main_script = os.path.join(projeto_root, "main.py")
-
-    res = subprocess.run(
-        [sys.executable, main_script],
-        cwd=projeto_root,
-        capture_output=True,
-        text=True,
-    )
-    if res.returncode == 0:
-        await interaction.followup.send("✅ Pipeline de Fluxo de Caixa concluída com sucesso!", ephemeral=True)
-    else:
-        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
-        detalhe_erro = (res.stderr or res.stdout or "Erro desconhecido").strip()
-        await interaction.followup.send(
-            f"❌ Falha na execução do script principal.\n```\n{detalhe_erro[:1500]}\n```", ephemeral=True
-        )
+    await _rodar_etl_e_reportar(lambda t: interaction.followup.send(t, ephemeral=True))
 
 
 # ==========================================
@@ -774,7 +765,7 @@ async def on_message(message: discord.Message):
     status_msg = await message.reply("🧠 Interpretando registro...")
 
     # Chama a IA usando a string limpa
-    dados_ia = interpretar_gasto_com_ia(texto_processar)
+    dados_ia = await asyncio.to_thread(interpretar_gasto_com_ia, texto_processar)
 
     if not dados_ia:
         await status_msg.edit(content="❌ Não consegui entender os dados. Tente ser mais claro.")
@@ -871,5 +862,17 @@ async def on_message(message: discord.Message):
         logger.error("Falha ao processar transação IA em %s: %s", aba_destino, e)
         await status_msg.edit(content=f"❌ Erro ao comunicar com os serviços: {e}")
 
-if __name__ == "__main__":
+async def run_async() -> None:
+    """Executa o bot dentro de um event loop ja existente (modo combinado)."""
+    logger.info("[Discord] Iniciando bot...")
+    async with bot:
+        await bot.start(DISCORD_TOKEN)
+
+
+def main() -> None:
+    """Executa o bot sozinho (modo standalone, gerencia o proprio loop)."""
     bot.run(DISCORD_TOKEN)
+
+
+if __name__ == "__main__":
+    main()

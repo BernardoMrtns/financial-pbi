@@ -1,6 +1,6 @@
 # Guia de Configuração — Telegram Bot (com Mini App)
 
-O `telegrambot.py` tem **paridade total** com o bot do Discord. Toda a UI
+O `bots/telegram_bot.py` tem **paridade total** com o bot do Discord. Toda a UI
 interativa é um **Telegram Mini App** — uma página estática (`docs/index.html`)
 hospedada de graça no **GitHub Pages**. Não há servidor, domínio nem custo.
 
@@ -73,11 +73,16 @@ GEMINI_API_KEY = "sua_chave_gemini"   # texto livre com IA
 
 ```bash
 pip install -r requirements.txt
-python telegrambot.py
+python run_bots.py            # Telegram + Discord no mesmo processo
+# ou, só o Telegram:
+python -m bots.telegram_bot
 ```
 
 No Telegram, envie `/start` — o painel aparece. Toque em **🟢 Receita** para
 testar o Mini App.
+
+> O `run_bots.py` roda os dois bots num único serviço (é o entrypoint da VM).
+> O `main.py` continua sendo só o ETL, chamado pelo cron e pelo `/run_script`.
 
 ---
 

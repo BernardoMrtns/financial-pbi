@@ -67,9 +67,20 @@ Importante:
 
 ## Execução
 
+ETL / recálculo do Fluxo de Caixa (rodado pelo cron da VM e pelo `/run_script`):
+
 ```bash
 python main.py
 ```
+
+Bots (Telegram + Discord no mesmo processo):
+
+```bash
+python run_bots.py
+```
+
+Para rodar só um: `python -m bots.telegram_bot` ou `python -m bots.discord_bot`.
+Configuração do Mini App do Telegram: ver `TELEGRAMBOT_SETUP.md`.
 
 ## Testes
 

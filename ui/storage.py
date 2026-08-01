@@ -10,7 +10,7 @@ import discord
 import pandas as pd
 
 from config import SCHEMA_ABAS
-from services.database import adicionar_linha_db
+from database import adicionar_linha_db
 from utils.logging_config import get_logger
 
 from ui.constants import COR_ERRO

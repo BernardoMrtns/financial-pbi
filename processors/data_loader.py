@@ -3,7 +3,7 @@ from typing import Any, Dict
 import pandas as pd
 
 from config import SCHEMA_ABAS
-from services.database import ler_tabela_db
+from database import ler_tabela_db
 from utils import converter_data_flexivel, converter_numero_flexivel, get_logger, normalizar_nome_cartao
 
 logger = get_logger(__name__)

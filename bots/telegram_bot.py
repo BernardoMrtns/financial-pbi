@@ -15,6 +15,7 @@ registro por texto livre com IA. Apple Pay permanece exclusivo do Discord.
 """
 
 import base64
+import asyncio
 import html
 import json
 import os
@@ -43,7 +44,7 @@ from telegram.ext import (
 import config
 from config import AUTHORIZED_USER_ID, SCHEMA_ABAS, TELEGRAM_TOKEN
 from services.ai_parser import interpretar_gasto_com_ia
-from services.database import (
+from database import (
     adicionar_linha_db,
     atualizar_registro_db,
     buscar_registro_db,
@@ -62,6 +63,10 @@ spreadsheet = None
 # URL do Mini App (GitHub Pages). Pode ser sobrescrita em config.py se um dia
 # houver dominio proprio; caso contrario, usa o Pages do repositorio publico.
 MINIAPP_URL = getattr(config, "MINIAPP_URL", "https://bernardomrtns.github.io/financial-pbi/")
+
+# Raiz do projeto (este arquivo agora vive em bots/, entao subimos um nivel).
+PROJETO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MAIN_SCRIPT = os.path.join(PROJETO_ROOT, "main.py")
 
 
 # ==========================================
@@ -423,16 +428,21 @@ async def abrir_ass_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     _rastrear(context, msg)
 
 
+def _telemetria() -> str:
+    ram = subprocess.check_output(
+        "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
+    ).decode().strip()
+    disco = subprocess.check_output(
+        "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
+    ).decode().strip()
+    return f"🖥️ <b>Saúde do Servidor:</b>\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+
+
 @restrito
 async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        ram = subprocess.check_output(
-            "free -m | awk 'NR==2{printf \"%.2f%%\", $3*100/$2 }'", shell=True
-        ).decode().strip()
-        disco = subprocess.check_output(
-            "df -h / | awk '$NF==\"/\"{printf \"%s\", $5}'", shell=True
-        ).decode().strip()
-        msg = f"🖥️ <b>Saúde do Servidor:</b>\n• RAM: {ram}\n• Disco: {disco}\n• DB: Conectada"
+        # to_thread para nao bloquear o event loop (compartilhado com o Discord).
+        msg = await asyncio.to_thread(_telemetria)
         await responder(update, context, msg)
     except Exception:  # noqa: BLE001
         await responder(update, context, "⚠️ Erro ao obter telemetria.")
@@ -440,18 +450,19 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 @restrito
 async def run_script_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    projeto_root = os.path.dirname(os.path.abspath(__file__))
-    main_script = os.path.join(projeto_root, "main.py")
-
     await responder(update, context, "🔄 Executando motor ETL... Aguarde.")
-    res = subprocess.run(
-        [sys.executable, main_script], cwd=projeto_root, capture_output=True, text=True
+    # Subprocesso assincrono: o ETL e longo e nao pode congelar os dois bots.
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, MAIN_SCRIPT, cwd=PROJETO_ROOT,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
-    if res.returncode == 0:
+    stdout, stderr = await proc.communicate()
+    if proc.returncode == 0:
         await responder(update, context, "✅ Pipeline de Fluxo de Caixa concluída com sucesso!")
     else:
-        logger.error("run_script falhou: %s", res.stderr.strip() or res.stdout.strip())
-        detalhe = html.escape((res.stderr or res.stdout or "Erro desconhecido").strip())
+        out = (stderr or stdout or b"").decode(errors="replace").strip()
+        logger.error("run_script falhou: %s", out)
+        detalhe = html.escape(out or "Erro desconhecido")
         await responder(update, context, f"❌ Falha na execução do script principal.\n<pre>{detalhe[:1500]}</pre>")
 
 
@@ -682,7 +693,8 @@ async def sql_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Processa texto natural usando IA e roteia para a aba correta."""
     status_msg = await update.effective_message.reply_text("🧠 Interpretando registro...")
-    dados_ia = interpretar_gasto_com_ia(update.effective_message.text)
+    # to_thread: a chamada ao Gemini e bloqueante e nao pode congelar o Discord.
+    dados_ia = await asyncio.to_thread(interpretar_gasto_com_ia, update.effective_message.text)
 
     try:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
@@ -766,11 +778,8 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # ==========================================
 
 
-def main() -> None:
-    global spreadsheet
-    logger.info("A ligar ao ecossistema Google...")
-    spreadsheet = conectar_google_sheets()
-
+def build_app():
+    """Monta a Application do Telegram com todos os handlers registrados."""
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     # Basicos
@@ -807,9 +816,39 @@ def main() -> None:
 
     # Texto livre (IA) SEMPRE POR ULTIMO
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), mensagem_livre_cmd))
+    return app
 
+
+async def run_async() -> None:
+    """Executa o bot dentro de um event loop ja existente (modo combinado).
+
+    Usado pelo `run_bots.py` para rodar Telegram e Discord no mesmo processo.
+    """
+    global spreadsheet
+    logger.info("[Telegram] A ligar ao ecossistema Google...")
+    spreadsheet = await asyncio.to_thread(conectar_google_sheets)
+
+    app = build_app()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    logger.info("[Telegram] Bot com Mini App em escuta (modo combinado)!")
+    try:
+        await asyncio.Event().wait()  # roda ate ser cancelado
+    finally:
+        if app.updater.running:
+            await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
+
+
+def main() -> None:
+    """Executa o bot sozinho (modo standalone, gerencia o proprio loop)."""
+    global spreadsheet
+    logger.info("A ligar ao ecossistema Google...")
+    spreadsheet = conectar_google_sheets()
     logger.info("Bot financeiro com Mini App em escuta!")
-    app.run_polling()
+    build_app().run_polling()
 
 
 if __name__ == "__main__":

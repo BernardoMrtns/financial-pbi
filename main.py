@@ -2,7 +2,7 @@ import pandas as pd
 from processors import DataLoader, FluxoCaixaProcessor, PatrimonioCalculator
 from services import conectar_google_sheets
 from services.google_sheets import salvar_aba, adicionar_linha_aba
-from services.database import atualizar_tabela_completa, adicionar_linha_db
+from database import atualizar_tabela_completa, adicionar_linha_db
 from utils import get_logger
 
 logger = get_logger(__name__)
