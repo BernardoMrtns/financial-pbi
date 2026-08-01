@@ -3,9 +3,4 @@ venv/
 __pycache__/
 credentials.json
 config.py
-financial.Report/.pbi/localSettings.json
-financial.Report/definition/pages/pages.json
-financial.SemanticModel/.pbi/cache.abf
-financial.SemanticModel/.pbi/localSettings.json
-financial.SemanticModel/diagramLayout.json
 logs/
