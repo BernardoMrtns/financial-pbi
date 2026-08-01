@@ -10,6 +10,7 @@ import discord
 
 # --- Valores canonicos (devem bater com o schema do ai_parser) ---
 
+# Categorias de saida (compras/debitos/cartao/pix/wishlist/assinaturas).
 CATEGORIAS: list[str] = [
     "Vestuário",
     "Comida",
@@ -28,6 +29,12 @@ CATEGORIAS: list[str] = [
     "Outros",
 ]
 
+# Categorias de entrada (receitas) — vocabulario proprio, distinto das compras.
+CATEGORIAS_RECEITA: list[str] = [
+    "Trabalho",
+    "Pix Avulso",
+]
+
 CARTOES: list[str] = ["Inter", "Nubank", "MercadoPago", "PicPay", "AmazonPrime"]
 
 # Contas usadas para debito/receita (inclui dinheiro fisico, alem dos cartoes).
@@ -36,6 +43,7 @@ CONTAS: list[str] = ["Inter", "Nubank", "MercadoPago", "PicPay", "Dinheiro"]
 PRIORIDADES: list[str] = ["Baixa", "Media", "Alta"]
 
 CATEGORIA_PADRAO = "Outros"
+CATEGORIA_RECEITA_PADRAO = "Pix Avulso"
 CONTA_PADRAO = "Inter"
 PRIORIDADE_PADRAO = "Media"
 

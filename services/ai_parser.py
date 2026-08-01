@@ -169,22 +169,33 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
       usar "Inter"
 
     - categoria:
-      Pode ser SOMENTE:
-      - "Vestuário"
-      - "Comida"
-      - "iFood"
-      - "Lazer"
-      - "Saúde"
-      - "Presentes"
-      - "Utilidades"
-      - "Eletrônicos"
-      - "Moradia"
-      - "Transporte"
-      - "Educação"
-      - "Assinaturas"
-      - "Viagem"
-      - "Bebidas"
-      - "Outros"
+      REGRA CRÍTICA — o vocabulário depende do "tipo":
+
+      * Se tipo == "Receita":
+        categoria deve ser SOMENTE:
+        - "Trabalho"    (salário, freela, pagamento por serviço prestado)
+        - "Pix Avulso"  (recebimento avulso, reembolso, transferência recebida)
+        Se não informado, usar "Pix Avulso".
+        NUNCA use as categorias de compra abaixo para uma Receita.
+
+      * Se tipo != "Receita":
+        categoria deve ser SOMENTE uma das categorias de compra:
+        - "Vestuário"
+        - "Comida"
+        - "iFood"
+        - "Lazer"
+        - "Saúde"
+        - "Presentes"
+        - "Utilidades"
+        - "Eletrônicos"
+        - "Moradia"
+        - "Transporte"
+        - "Educação"
+        - "Assinaturas"
+        - "Viagem"
+        - "Bebidas"
+        - "Outros"
+        NUNCA use "Trabalho" ou "Pix Avulso" fora de uma Receita.
 
     - DICA DE CATEGORIZAÇÃO:
       - Zara, Shein, Renner, C&A, tenis, calça, camisa, roupa, sapato:
@@ -281,7 +292,9 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
                     "Assinaturas",
                     "Viagem",
                     "Bebidas",
-                    "Outros"
+                    "Outros",
+                    "Trabalho",
+                    "Pix Avulso"
                 ]
             },
 

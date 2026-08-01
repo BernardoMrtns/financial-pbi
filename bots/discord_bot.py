@@ -21,6 +21,7 @@ from services.google_sheets import atualizar_registro_sheets, conectar_google_sh
 from ui.constants import (
     CARTOES,
     CATEGORIAS,
+    CATEGORIAS_RECEITA,
     CONTAS,
     COR_ASSINATURA,
     COR_CARTAO,
@@ -286,6 +287,7 @@ def _choices(opcoes):
 
 
 CHOICES_CATEGORIA = _choices(CATEGORIAS)
+CHOICES_CATEGORIA_RECEITA = _choices(CATEGORIAS_RECEITA)
 CHOICES_CONTA = _choices(CONTAS)
 CHOICES_CARTAO = _choices(CARTOES)
 CHOICES_PRIORIDADE = _choices(PRIORIDADES)
@@ -479,7 +481,7 @@ async def sql_cmd(interaction: discord.Interaction, query: str, limite: int = 20
 
 @bot.tree.command(name="receita", description="Registra uma entrada de dinheiro")
 @app_commands.describe(valor="Ex: 1500", conta="Conta de destino", categoria="Categoria", descricao="Origem da receita")
-@app_commands.choices(conta=CHOICES_CONTA, categoria=CHOICES_CATEGORIA)
+@app_commands.choices(conta=CHOICES_CONTA, categoria=CHOICES_CATEGORIA_RECEITA)
 async def receita_cmd(interaction, valor: str, conta: str, categoria: str, descricao: str):
     await interaction.response.defer(ephemeral=True, thinking=True)
     dados = {

@@ -17,7 +17,9 @@ from utils.data_utils import converter_numero_flexivel
 from ui.constants import (
     CARTOES,
     CATEGORIAS,
+    CATEGORIAS_RECEITA,
     CATEGORIA_PADRAO,
+    CATEGORIA_RECEITA_PADRAO,
     CONTAS,
     CONTA_PADRAO,
     COR_ASSINATURA,
@@ -60,7 +62,7 @@ def _sel(campo: discord.ui.Label, padrao: str) -> str:
 class ReceitaModal(discord.ui.Modal, title="🟢 Nova Receita"):
     valor = discord.ui.TextInput(label="Valor", placeholder="Ex: 1500", required=True)
     conta = dropdown("Conta de destino", CONTAS, padrao=CONTA_PADRAO)
-    categoria = dropdown("Categoria", CATEGORIAS)
+    categoria = dropdown("Categoria", CATEGORIAS_RECEITA, padrao=CATEGORIA_RECEITA_PADRAO)
     descricao = discord.ui.TextInput(label="Descrição", placeholder="Origem da receita", required=True)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -69,7 +71,7 @@ class ReceitaModal(discord.ui.Modal, title="🟢 Nova Receita"):
             "Data": _hoje(),
             "Valor": converter_numero_flexivel(str(self.valor.value)),
             "ContaDestino": _sel(self.conta, CONTA_PADRAO),
-            "Categoria": _sel(self.categoria, CATEGORIA_PADRAO),
+            "Categoria": _sel(self.categoria, CATEGORIA_RECEITA_PADRAO),
             "Descricao": str(self.descricao.value),
         }
         await gravar_e_confirmar(

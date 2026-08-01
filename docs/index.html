@@ -69,6 +69,7 @@ const tg = window.Telegram ? window.Telegram.WebApp : null;
 /* ---- Constantes canonicas (espelham ui/constants.py + ai_parser) ---- */
 const CATEGORIAS = ["Vestuário","Comida","iFood","Lazer","Saúde","Presentes","Utilidades",
   "Eletrônicos","Moradia","Transporte","Educação","Assinaturas","Viagem","Bebidas","Outros"];
+const CATEGORIAS_RECEITA = ["Trabalho","Pix Avulso"];
 const CARTOES = ["Inter","Nubank","MercadoPago","PicPay","AmazonPrime"];
 const CONTAS  = ["Inter","Nubank","MercadoPago","PicPay","Dinheiro"];
 const PRIORIDADES = ["Baixa","Media","Alta"];
@@ -134,7 +135,7 @@ function telaReceita(){
   h(header("🟢","Nova Receita","Dinheiro entrando") +
     field("Valor", `<input id="valor" inputmode="decimal" placeholder="Ex: 1500">`) +
     field("Conta de destino", `<select id="conta">${opts(CONTAS,"Inter")}</select>`) +
-    field("Categoria", `<select id="categoria">${opts(CATEGORIAS)}</select>`) +
+    field("Categoria", `<select id="categoria">${opts(CATEGORIAS_RECEITA,"Pix Avulso")}</select>`) +
     field("Descrição", `<input id="descricao" placeholder="Origem da receita">`));
   setSubmit("💾 Registrar receita", () => {
     if (!num(el("valor").value)) return fail("Informe o valor.");
