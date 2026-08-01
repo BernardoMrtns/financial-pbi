@@ -2,11 +2,10 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainerMobileState/2.3.0/schema.json",
   "position": {
     "x": 0,
-    "y": 699,
-    "z": 2001,
+    "y": 1101,
+    "z": 2003,
     "height": 402,
-    "width": 324,
-    "tabOrder": 2001
+    "width": 324
   },
   "objects": {
     "categoryAxis": [
@@ -35,13 +34,6 @@
                 }
               }
             }
-          },
-          "concatenateLabels": {
-            "expr": {
-              "Literal": {
-                "Value": "true"
-              }
-            }
           }
         }
       }
@@ -62,18 +54,6 @@
             }
           },
           "titleColor": {
-            "solid": {
-              "color": {
-                "expr": {
-                  "ThemeDataColor": {
-                    "ColorId": 1,
-                    "Percent": 0
-                  }
-                }
-              }
-            }
-          },
-          "gridlineColor": {
             "solid": {
               "color": {
                 "expr": {

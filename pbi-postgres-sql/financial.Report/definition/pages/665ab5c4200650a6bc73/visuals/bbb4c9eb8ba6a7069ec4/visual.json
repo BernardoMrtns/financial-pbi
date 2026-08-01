@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
   "name": "bbb4c9eb8ba6a7069ec4",
   "position": {
-    "x": 640.20151133501258,
+    "x": 640,
     "y": 0,
     "z": 0,
-    "height": 720,
-    "width": 640.20151133501258,
+    "height": 262.61398176291794,
+    "width": 640,
     "tabOrder": 0
   },
   "visual": {
@@ -305,6 +305,58 @@
           }
         },
         "type": "RelativeDate",
+        "howCreated": "User"
+      },
+      {
+        "name": "5c4fe80c442a95ddd420",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "dCalendario"
+              }
+            },
+            "Property": "AnoMês"
+          }
+        },
+        "type": "RelativeDate",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "d",
+              "Entity": "dCalendario",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "Comparison": {
+                  "ComparisonKind": 0,
+                  "Left": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Source": "d"
+                        }
+                      },
+                      "Property": "AnoMês"
+                    }
+                  },
+                  "Right": {
+                    "DateSpan": {
+                      "Expression": {
+                        "Now": {}
+                      },
+                      "TimeUnit": 2
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
         "howCreated": "User"
       }
     ]

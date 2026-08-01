@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
-  "name": "1309fd5191e8dbe4b89c",
+  "name": "b2e919813e510cc6a702",
   "position": {
-    "x": 0,
-    "y": 262.61398176291794,
-    "z": 2000,
+    "x": 640,
+    "y": 261.64133738601822,
+    "z": 4000,
     "height": 458.11550151975683,
-    "width": 640.97264437689978,
-    "tabOrder": 2000
+    "width": 640,
+    "tabOrder": 4000
   },
   "visual": {
     "visualType": "barChart",
@@ -180,7 +180,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Gasto/Categoria Mês Atual'"
+                  "Value": "'Projeção Gasto/Categoria Mês Seguinte'"
                 }
               }
             },
@@ -375,9 +375,8 @@
           "Where": [
             {
               "Condition": {
-                "Comparison": {
-                  "ComparisonKind": 0,
-                  "Left": {
+                "Between": {
+                  "Expression": {
                     "Column": {
                       "Expression": {
                         "SourceRef": {
@@ -387,12 +386,44 @@
                       "Property": "AnoMês"
                     }
                   },
-                  "Right": {
+                  "LowerBound": {
                     "DateSpan": {
                       "Expression": {
-                        "Now": {}
+                        "DateAdd": {
+                          "Expression": {
+                            "Now": {}
+                          },
+                          "Amount": 1,
+                          "TimeUnit": 0
+                        }
                       },
-                      "TimeUnit": 2
+                      "TimeUnit": 0
+                    }
+                  },
+                  "UpperBound": {
+                    "DateSpan": {
+                      "Expression": {
+                        "DateAdd": {
+                          "Expression": {
+                            "DateAdd": {
+                              "Expression": {
+                                "DateAdd": {
+                                  "Expression": {
+                                    "Now": {}
+                                  },
+                                  "Amount": 1,
+                                  "TimeUnit": 0
+                                }
+                              },
+                              "Amount": -1,
+                              "TimeUnit": 0
+                            }
+                          },
+                          "Amount": 1,
+                          "TimeUnit": 2
+                        }
+                      },
+                      "TimeUnit": 0
                     }
                   }
                 }
