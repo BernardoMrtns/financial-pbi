@@ -42,11 +42,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Total Consumo (Data Compra)"
+                  "Property": "Total Consolidado (Fatura e Compra)"
                 }
               },
-              "queryRef": "_Measures.Total Consumo (Data Compra)",
-              "nativeQueryRef": "Total Consumo (Data Compra)"
+              "queryRef": "_Measures.Total Consolidado (Fatura e Compra)",
+              "nativeQueryRef": "Total Consolidado (Fatura e Compra)"
             }
           ]
         }
@@ -61,7 +61,7 @@
                     "Entity": "_Measures"
                   }
                 },
-                "Property": "Total Consumo (Data Compra)"
+                "Property": "Total Consolidado (Fatura e Compra)"
               }
             },
             "direction": "Descending"
@@ -349,20 +349,6 @@
             }
           ]
         }
-      },
-      {
-        "name": "46993bbe0f728151b2cd",
-        "field": {
-          "Measure": {
-            "Expression": {
-              "SourceRef": {
-                "Entity": "_Measures"
-              }
-            },
-            "Property": "Total Consumo (Data Compra)"
-          }
-        },
-        "type": "Advanced"
       }
     ]
   }

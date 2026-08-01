@@ -13132,6 +13132,31 @@
             ],
             "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
             "lineageTag": "8934a8ff-3029-4ecd-a043-bd4005a25be1"
+          },
+          {
+            "name": "Total Consolidado (Fatura e Compra)",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    SUM(FluxoCaixaCompleto[Valor]),",
+              "    FILTER(",
+              "        FluxoCaixaCompleto,",
+              "        -- Condição 1: A data original (compra) pertence ao mês do contexto atual",
+              "        FluxoCaixaCompleto[DataOriginal] IN VALUES(dCalendario[Date]) ",
+              "        || ",
+              "        -- Condição 2: A data da fatura/pagamento pertence ao mês do contexto atual",
+              "        FluxoCaixaCompleto[DataCompetencia] IN VALUES(dCalendario[Date])",
+              "    )",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
+            "lineageTag": "27b73397-1fb0-4437-ab31-cf6d39aee7ab"
           }
         ],
         "partitions": [
