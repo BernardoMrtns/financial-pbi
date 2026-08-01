@@ -35,6 +35,10 @@ def _hoje() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
+def _agora() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def dropdown(
     texto: str,
     opcoes: list[str],
@@ -113,7 +117,7 @@ class CartaoModal(discord.ui.Modal, title="💳 Compra no Cartão"):
         except ValueError:
             parcelas = 1
         dados = {
-            "Data": _hoje(),
+            "Data": _agora(),
             "ValorTotal": converter_numero_flexivel(str(self.valor.value)),
             "Cartao": _sel(self.cartao, CARTOES[0]),
             "Parcelas": parcelas,

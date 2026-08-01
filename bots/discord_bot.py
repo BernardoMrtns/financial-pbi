@@ -515,7 +515,7 @@ async def debito_cmd(interaction, valor: str, conta: str, categoria: str, descri
 async def cartao_cmd(interaction, valor_total: str, cartao: str, parcelas: int, categoria: str, descricao: str):
     await interaction.response.defer(ephemeral=True, thinking=True)
     dados = {
-        "Data": datetime.now().strftime("%Y-%m-%d"),
+        "Data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "ValorTotal": converter_numero_flexivel(valor_total),
         "Cartao": cartao,
         "Parcelas": parcelas,

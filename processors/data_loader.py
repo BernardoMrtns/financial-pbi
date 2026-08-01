@@ -52,7 +52,10 @@ class DataLoader:
             mapa_pagamentos = dict(zip(df_fpg["Cartao"].map(normalizar_nome_cartao), df_fpg["UltimoCicloPago"]))
 
         # Limpeza e tipagem dos DataFrames extraídos do DB
-        for df in [df_compras, df_pix, df_assin, df_debito, df_receitas]:
+        if not df_compras.empty and "Data" in df_compras.columns:
+            df_compras["Data"] = converter_data_flexivel(df_compras["Data"], preservar_hora=True)
+
+        for df in [df_pix, df_assin, df_debito, df_receitas]:
             if df.empty:
                 continue
             if "Data" in df.columns:

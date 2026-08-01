@@ -192,6 +192,10 @@ def _hoje() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
+def _agora() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 @restrito
 async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Recebe o JSON enviado por `WebApp.sendData` e roteia para a acao correta."""
@@ -229,7 +233,7 @@ async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             except ValueError:
                 parcelas = 1
             dados = {
-                "Data": _hoje(),
+                "Data": _agora(),
                 "ValorTotal": converter_numero_flexivel(payload["valor"]),
                 "Cartao": payload["cartao"],
                 "Parcelas": parcelas,
@@ -592,7 +596,7 @@ async def cartao_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if len(context.args) < 5:
         return await responder(update, context, "⚠️ Formato: /cartao [valor] [cartao] [parc] [cat] [desc]")
     dados = {
-        "Data": _hoje(),
+        "Data": _agora(),
         "ValorTotal": converter_numero_flexivel(context.args[0]),
         "Cartao": context.args[1],
         "Parcelas": int(context.args[2]),
