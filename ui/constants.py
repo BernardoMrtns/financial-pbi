@@ -50,10 +50,10 @@ PRIORIDADE_PADRAO = "Media"
 
 # --- Identidade visual do painel (cor + emoji por tipo de operacao) ---
 
-COR_RECEITA = discord.Color.from_str("#2ecc71")
-COR_DEBITO = discord.Color.from_str("#e74c3c")
-COR_CARTAO = discord.Color.from_str("#9b59b6")
-COR_PIX = discord.Color.from_str("#1abc9c")
-COR_ASSINATURA = discord.Color.from_str("#e67e22")
-COR_ERRO = discord.Color.from_str("#992d22")
-COR_PAINEL = discord.Color.from_str("#5865f2")
+COR_RECEITA = discord.Color.from_str("#059669")  # Emerald-600 (darker)
+COR_DEBITO = discord.Color.from_str("#dc2626")  # Red-600
+COR_CARTAO = discord.Color.from_str("#6d28d9")  # Violet-700 (muted purple)
+COR_PIX = discord.Color.from_str("#0d9488")     # Teal-600
+COR_ASSINATURA = discord.Color.from_str("#d97706")  # Amber-600
+COR_ERRO = discord.Color.from_str("#b91c1c")   # Red-700 (error)
+COR_PAINEL = discord.Color.from_str("#0f172a")  # Slate-900 (dark panel)

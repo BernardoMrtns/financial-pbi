@@ -167,6 +167,25 @@ def executar_sql_livre(query: str) -> dict:
         logger.error(f"Erro ao executar SQL livre: {e}")
         return {"ok": False, "erro": str(e)}
 
+
+def executar_sql_parametrizado(query: str, params: dict | None = None) -> dict:
+    """Executa uma query SQL com parâmetros vinculados.
+
+    Usado por consultas geradas a partir de linguagem natural para evitar
+    interpolação manual de valores no texto da query.
+    """
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text(query), params or {})
+            if result.returns_rows:
+                colunas = list(result.keys())
+                linhas = [dict(row) for row in result.mappings().fetchall()]
+                return {"ok": True, "tipo": "select", "colunas": colunas, "linhas": linhas}
+            return {"ok": True, "tipo": "exec", "rowcount": result.rowcount}
+    except Exception as e:
+        logger.error(f"Erro ao executar SQL parametrizado: {e}")
+        return {"ok": False, "erro": str(e)}
+
 def ler_tabela_db(nome_aba: str) -> pd.DataFrame:
     """Lê uma tabela inteira do PostgreSQL e retorna como DataFrame."""
     tabela = TABELAS_MAP.get(nome_aba)

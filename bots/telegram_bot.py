@@ -44,10 +44,16 @@ from telegram.ext import (
 import config
 from config import AUTHORIZED_USER_ID, SCHEMA_ABAS, TELEGRAM_TOKEN
 from services.ai_parser import interpretar_gasto_com_ia
+from services.ai_parser import (
+    construir_consulta_financeira,
+    interpretar_consulta_financeira,
+    parece_consulta_financeira,
+)
 from database import (
     adicionar_linha_db,
     atualizar_registro_db,
     buscar_registro_db,
+    executar_sql_parametrizado,
     executar_sql_livre,
     ler_tabela_db,
 )
@@ -130,6 +136,93 @@ def _rastrear(context: ContextTypes.DEFAULT_TYPE, message) -> None:
     fila: deque = context.chat_data.setdefault("bot_msgs", deque(maxlen=300))
     fila.append(message.message_id)
 
+def _formatar_moeda_br(valor) -> str:
+    try:
+        numero = float(valor)
+    except Exception:
+        return str(valor)
+    texto = f"{numero:,.2f}"
+    return f"R$ {texto.replace(',', 'X').replace('.', ',').replace('X', '.')}"
+
+
+def _rotulo_periodo(periodo: str) -> str:
+    rotulos = {
+        "mes_atual": "neste mês",
+        "mes_anterior": "no mês passado",
+        "ano_atual": "neste ano",
+        "ultimos_30_dias": "nos últimos 30 dias",
+        "todos": "em todo o histórico",
+    }
+    return rotulos.get(periodo, "neste período")
+
+
+def _montar_texto_consulta(plano: dict, valor) -> str:
+    tipo_consulta = str(plano.get("tipo_consulta", "")).strip().lower()
+    categoria = str(plano.get("categoria", "")).strip()
+    periodo = _rotulo_periodo(str(plano.get("periodo", "mes_atual")).strip().lower())
+    valor_fmt = _formatar_moeda_br(valor)
+
+    if tipo_consulta == "gasto_categoria":
+        if categoria:
+            return f"Você gastou {valor_fmt} com {categoria} {periodo}."
+        return f"Você gastou {valor_fmt} {periodo}."
+    if tipo_consulta == "gasto_total":
+        return f"Você gastou {valor_fmt} {periodo}."
+    if tipo_consulta == "receita_categoria":
+        if categoria:
+            return f"Você recebeu {valor_fmt} de {categoria} {periodo}."
+        return f"Você recebeu {valor_fmt} {periodo}."
+    if tipo_consulta == "receita_total":
+        return f"Você recebeu {valor_fmt} {periodo}."
+    if tipo_consulta == "saldo_periodo":
+        return f"Saldo {periodo}: {valor_fmt}."
+    return valor_fmt
+
+
+async def _processar_consulta_natural(update, context, texto_usuario: str, forcar: bool = False) -> bool:
+    if not forcar and not parece_consulta_financeira(texto_usuario):
+        return False
+
+    status_msg = await update.effective_message.reply_text("🔎 Interpretando consulta...")
+    plano = await asyncio.to_thread(interpretar_consulta_financeira, texto_usuario)
+
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)
+    except Exception:  # noqa: BLE001
+        pass
+
+    if not plano or str(plano.get("tipo", "")).lower() != "consulta":
+        if forcar:
+            await responder(
+                update,
+                context,
+                "❌ Não consegui transformar isso em uma consulta financeira. Tente algo como: `quanto eu gastei com comida esse mês?`",
+            )
+            return True
+        return False
+
+    try:
+        query, params = construir_consulta_financeira(plano)
+    except Exception:
+        return False
+
+    resultado = await asyncio.to_thread(executar_sql_parametrizado, query, params)
+    if not resultado.get("ok"):
+        await responder(update, context, f"❌ Erro ao executar a consulta:\n<pre>{html.escape(resultado['erro'][:1500])}</pre>")
+        return True
+
+    if resultado.get("tipo") == "select" and len(resultado.get("linhas", [])) == 1 and len(resultado.get("colunas", [])) == 1:
+        valor = next(iter(resultado["linhas"][0].values()))
+        await responder(update, context, _montar_texto_consulta(plano, valor))
+        return True
+
+    texto, png = montar_resposta_sql(resultado, int(plano.get("limite") or 20))
+    if png is not None:
+        msg = await update.effective_message.reply_photo(photo=png, caption=texto)
+        _rastrear(context, msg)
+        return True
+    await responder(update, context, texto)
+    return True
 
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE, texto: str, **kwargs):
     """Envia texto (HTML) e rastreia o id para a limpeza."""
@@ -511,7 +604,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     msg = await update.effective_message.reply_text(
         "🚀 <b>Sistema Financeiro Online</b>\n\n"
         "Use o painel abaixo (Mini Apps) para registrar em um toque, "
-        "mande o gasto por texto (ex: <i>gastei 30 no ifood</i>) ou use /help.",
+        "mande um gasto por texto (ex: <i>gastei 30 no ifood</i>) ou pergunte algo como <i>quanto eu gastei com comida esse mês?</i>.",
         parse_mode=ParseMode.HTML,
         reply_markup=painel_keyboard(),
     )
@@ -552,7 +645,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "🖥️ /status — <i>Telemetria da VM</i>\n"
         "⚙️ /run_script — <i>Recalcular Fluxo de Caixa</i>\n"
         "🧹 /limpar — <i>Apaga as mensagens do bot</i>\n\n"
-        "💡 <b>Dica:</b> Você pode apenas escrever <i>'15 no inter com lanche'</i> e a IA entende!"
+        "💡 <b>Dica:</b> Você pode apenas escrever <i>'15 no inter com lanche'</i> ou perguntar <i>'quanto eu gastei com comida esse mês?'</i>."
     )
     msg = await update.effective_message.reply_text(guia, parse_mode=ParseMode.HTML)
     _rastrear(context, msg)
@@ -696,9 +789,14 @@ async def sql_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 @restrito
 async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Processa texto natural usando IA e roteia para a aba correta."""
+    texto_usuario = update.effective_message.text or ""
+
+    if await _processar_consulta_natural(update, context, texto_usuario, forcar=parece_consulta_financeira(texto_usuario)):
+        return
+
     status_msg = await update.effective_message.reply_text("🧠 Interpretando registro...")
     # to_thread: a chamada ao Gemini e bloqueante e nao pode congelar o Discord.
-    dados_ia = await asyncio.to_thread(interpretar_gasto_com_ia, update.effective_message.text)
+    dados_ia = await asyncio.to_thread(interpretar_gasto_com_ia, texto_usuario)
 
     try:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=status_msg.message_id)

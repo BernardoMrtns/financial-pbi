@@ -7,10 +7,11 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
-    --bg: var(--tg-theme-bg-color, #09090b);
-    --panel: color-mix(in srgb, var(--tg-theme-secondary-bg-color, #111827) 84%, #000 16%);
-    --panel-2: color-mix(in srgb, var(--panel) 74%, #000 26%);
-    --panel-3: color-mix(in srgb, var(--panel) 62%, #000 38%);
+    --bg: var(--tg-theme-bg-color, #06070a);
+    --panel: var(--tg-theme-secondary-bg-color, #0f172a); /* darker slate */
+    /* unify palette: derive other panel variables from --panel so all panels share same base */
+    --panel-2: color-mix(in srgb, var(--panel) 96%, #000 4%);
+    --panel-3: color-mix(in srgb, var(--panel) 94%, #000 6%);
     --text: var(--tg-theme-text-color, #f4f4f5);
     --muted: var(--tg-theme-hint-color, #a1a1aa);
     --line: color-mix(in srgb, var(--muted) 28%, transparent);
@@ -22,7 +23,7 @@
     --radius-sm: 0px;
     --sidebar-w: 292px;
     --content-max: 760px;
-    --shadow: 0 1px 0 rgba(255,255,255,0.02), 0 12px 28px rgba(0,0,0,0.38);
+    --shadow: 0 1px 0 rgba(255,255,255,0.02), 0 6px 18px rgba(0,0,0,0.28);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html {
@@ -66,7 +67,7 @@
     height: 100vh;
     overflow: auto;
     padding: 20px 16px 18px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 24%), var(--panel);
+    background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent 24%), var(--panel);
     border-right: 1px solid var(--line);
     box-shadow: var(--shadow);
   }
@@ -179,8 +180,8 @@
     display: grid;
     gap: 14px;
     padding: 20px 20px 18px;
-    border: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+    border: 1px solid color-mix(in srgb, var(--line) 70%, transparent 30%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02)), var(--panel);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow);
     margin-bottom: 18px;
@@ -207,23 +208,10 @@
     max-width: 60ch;
     margin: 0;
   }
-  .hero-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .stat {
-    padding: 12px;
-    border: 1px solid var(--line);
-    background: rgba(255,255,255,0.02);
-    border-radius: var(--radius-sm);
-    min-width: 0;
-  }
-  .stat .k { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
-  .stat .v { display: block; margin-top: 8px; font-size: 15px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* hero-grid removed: internal debug stats hidden from end user */
   .card {
-    border: 1px solid var(--line);
-    background: var(--panel-2);
+    border: 1px solid color-mix(in srgb, var(--line) 60%, transparent 40%);
+    background: var(--panel);
     border-radius: var(--radius-sm);
     padding: 18px 18px 20px;
     box-shadow: var(--shadow);
@@ -260,15 +248,21 @@
     text-transform: uppercase;
   }
   input, select, textarea {
-    width: 100%; padding: 13px 14px; font-size: 15px;
-    background: var(--panel-3); color: var(--text);
-    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    width: 100%; padding: 14px 14px; font-size: 15px;
+    background: var(--panel-3);
+    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--line) 84%, transparent 16%);
+    border-radius: 6px;
     outline: none; appearance: none; -webkit-appearance: none;
     font-family: inherit;
-    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    transition: border-color .15s ease, background .15s ease, box-shadow .12s ease;
   }
-  input:focus, select:focus, textarea:focus { border-color: rgba(16,185,129,0.8); background: color-mix(in srgb, var(--panel-3) 82%, #000 18%); }
-  input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 72%, transparent); }
+  input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 56%, #fff 44%); }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(16,185,129,0.92);
+    background: color-mix(in srgb, var(--panel-3) 74%, #000 26%);
+    box-shadow: 0 6px 18px rgba(16,185,129,0.06);
+  }
   textarea {
     min-height: 146px; resize: vertical; font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: 13px;
   }
@@ -349,7 +343,7 @@
       border-bottom: 1px solid var(--line);
       padding-bottom: 12px;
     }
-    .content { padding: 18px 14px 88px; }
+    .content { padding: 18px 14px calc(88px + env(safe-area-inset-bottom)); }
     .content-inner { max-width: 100%; }
     .hero-grid { grid-template-columns: 1fr; }
     .mobile-nav {
@@ -363,14 +357,26 @@
     .nav-button { padding: 10px 10px; }
   }
   @media (max-width: 640px) {
-    .hero, .card { padding: 16px; }
-    .section-title { flex-direction: column; align-items: flex-start; }
-    .section-title .subhead { text-align: left; }
-    .row { flex-direction: column; }
+    html, body { font-size: 18px; }
+    .hero, .card { padding: 18px; }
+    .hero { gap: 18px; }
+    .section-title { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .section-title .subhead { text-align: left; font-size: 14px; }
+    .row { flex-direction: column; gap: 12px; }
     .sidebar { padding: 16px 12px 12px; }
-    .brand { padding: 4px 4px 14px; }
-    .brand-name { font-size: 18px; }
+    .brand { padding: 6px 6px 16px; }
+    .brand-name { font-size: 20px; }
+    .nav-button { padding: 12px 12px; font-size: 16px; }
+    .nav-button .label { font-size: 16px; }
+    .nav-button .icon { font-size: 20px; }
     .nav-button .meta { display: none; }
+    .title { font-size: 28px; }
+    .subtitle { font-size: 15px; }
+    label { font-size: 13px; }
+    input, select, textarea { font-size: 16px; padding: 16px; }
+    .field { margin-bottom: 18px; }
+    .card { padding-bottom: 22px; }
+    .content { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
   }
 </style>
 </head>
@@ -378,7 +384,49 @@
 <div id="app"></div>
 <script>
 "use strict";
-const tg = window.Telegram ? window.Telegram.WebApp : null;
+// Initialize Telegram WebApp bridge if available. When opening locally (file://)
+// create a lightweight mock so we can test MainButton hide/show behavior.
+let tg = window.Telegram ? window.Telegram.WebApp : null;
+const _localMock = !tg && location.protocol === 'file:';
+if (_localMock){
+  tg = {
+    MainButton: {
+      _visible: false,
+      _enabled: true,
+      setText(text){ this.text = text; console.log('MainButton.setText', text); },
+      show(){ this._visible = true; document.body.dataset.tgMainVisible = '1'; console.log('MainButton.show'); },
+      hide(){ this._visible = false; document.body.dataset.tgMainVisible = '0'; console.log('MainButton.hide'); },
+      enable(){ this._enabled = true; console.log('MainButton.enable'); },
+      disable(){ this._enabled = false; console.log('MainButton.disable'); },
+      onClick(fn){ this._click = fn; window._mockTgMainClick = fn; }
+    },
+    sendData(payload){ console.log('tg.sendData', payload); alert('Mock sendData:\n'+payload); },
+    close(){ console.log('tg.close'); },
+    ready(){ console.log('tg.ready'); },
+    expand(){ console.log('tg.expand'); },
+    HapticFeedback: { notificationOccurred(){ /* noop */ } },
+    showAlert(msg){ alert('Alert: '+msg); }
+  };
+  // expose the mock for debug/testing in file:// context
+  window.__tg = tg;
+}
+// If we're running from file:// create a tiny visual MainButton shim and
+// wrap existing `tg.MainButton` methods so focus/blur can be tested locally.
+if (location.protocol === 'file:'){
+  try {
+    const mainUi = document.createElement('div');
+    mainUi.id = '__tg_main_ui';
+    mainUi.style.cssText = 'position:fixed;right:16px;bottom:18px;padding:12px 14px;background:var(--accent);color:#042018;border-radius:12px;font-weight:700;box-shadow:0 8px 24px rgba(2,6,23,0.6);z-index:99999;display:none;align-items:center;gap:8px';
+    mainUi.textContent = 'Enviar';
+    document.body.appendChild(mainUi);
+    if (tg && tg.MainButton){
+      const orig = { show: tg.MainButton.show?.bind(tg.MainButton), hide: tg.MainButton.hide?.bind(tg.MainButton), setText: tg.MainButton.setText?.bind(tg.MainButton) };
+      tg.MainButton.show = () => { try{ if (orig.show) orig.show(); }catch(e){} mainUi.style.display = 'flex'; document.body.dataset.tgMainVisible = '1'; };
+      tg.MainButton.hide = () => { try{ if (orig.hide) orig.hide(); }catch(e){} mainUi.style.display = 'none'; document.body.dataset.tgMainVisible = '0'; };
+      tg.MainButton.setText = (t) => { try{ if (orig.setText) orig.setText(t); }catch(e){} mainUi.textContent = t; };
+    }
+  } catch(e) { /* ignore */ }
+}
 
 /* ---- Constantes canonicas (espelham ui/constants.py + ai_parser) ---- */
 const CATEGORIAS = ["Vestuário","Comida","iFood","Lazer","Saúde","Presentes","Utilidades",
@@ -469,12 +517,7 @@ function renderShell(mainHtml){
       <span class="left"><span class="icon">${item.emoji}</span><span class="label">${item.label}</span></span>
       <span class="meta">${item.meta}</span>
     </button>`).join("");
-  const counts = [
-    { k: "Rotas", v: formatCount(Object.keys(NAV).length) },
-    { k: "Estado", v: appState.type === "list" ? "Lista dinâmica" : "Formulário" },
-    { k: "Canal", v: tg ? "Telegram WebApp" : "Fallback local" },
-  ];
-  const stats = counts.map(s => `<div class="stat"><span class="k">${s.k}</span><span class="v mono">${s.v}</span></div>`).join("");
+  // internal counts removed from public UI
   const label = screenMeta(active);
   h(`
     <div class="shell">
@@ -501,9 +544,7 @@ function renderShell(mainHtml){
           <section class="hero">
             <div class="eyebrow">${label.group}</div>
             ${header(label.emoji, appState.title || label.label, appState.subtitle || "")}
-            <div class="hero-grid">
-              ${stats}
-            </div>
+            <!-- internal stats removed -->
           </section>
           <section class="card">
             <div class="section-title">
@@ -795,6 +836,33 @@ const ROTAS = {
   wishlist: telaWishlist, invest: telaInvest, assinatura: telaAssinatura,
   fatura: telaFatura, pixedit: telaPixEditar, asstoggle: telaAssToggle, sql: telaSql,
 };
+
+// Hide the Telegram MainButton while inputs are focused (mobile UX).
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (!t || !t.tagName) return;
+  const tag = t.tagName.toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'){
+    try { if (tg && tg.MainButton && tg.MainButton.hide) tg.MainButton.hide(); } catch(e){}
+  }
+});
+document.addEventListener('focusout', (e) => {
+  const t = e.target;
+  if (!t || !t.tagName) return;
+  const tag = t.tagName.toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'){
+    try { if (tg && tg.MainButton && tg.MainButton.show && submitFn) tg.MainButton.show(); } catch(e){}
+  }
+});
+// Ensure touch/clicks on inputs also hide the MainButton in some webviews.
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target;
+  if (!t || !t.tagName) return;
+  const tag = t.tagName.toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'){
+    try { if (tg && tg.MainButton && tg.MainButton.hide) tg.MainButton.hide(); } catch(e){}
+  }
+});
 
 function boot(){
   setSubmitDisabled(true);

@@ -15,8 +15,18 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import DISCORD_AUTHORIZED_USER_ID, DISCORD_TOKEN
-from services.ai_parser import interpretar_gasto_com_ia
-from database import atualizar_registro_db, executar_sql_livre, ler_tabela_db
+from services.ai_parser import (
+    construir_consulta_financeira,
+    interpretar_consulta_financeira,
+    interpretar_gasto_com_ia,
+    parece_consulta_financeira,
+)
+from database import (
+    atualizar_registro_db,
+    executar_sql_livre,
+    executar_sql_parametrizado,
+    ler_tabela_db,
+)
 from services.google_sheets import atualizar_registro_sheets, conectar_google_sheets
 from ui.constants import (
     CARTOES,
@@ -460,6 +470,79 @@ def _montar_resposta_sql(resultado: dict, limite: int = 20):
         return corpo, None
 
 
+def _formatar_moeda_br(valor) -> str:
+    try:
+        numero = float(valor)
+    except Exception:
+        return str(valor)
+    texto = f"{numero:,.2f}"
+    return f"R$ {texto.replace(',', 'X').replace('.', ',').replace('X', '.')}"
+
+
+def _rotulo_periodo(periodo: str) -> str:
+    rotulos = {
+        "mes_atual": "neste mês",
+        "mes_anterior": "no mês passado",
+        "ano_atual": "neste ano",
+        "ultimos_30_dias": "nos últimos 30 dias",
+        "todos": "em todo o histórico",
+    }
+    return rotulos.get(periodo, "neste período")
+
+
+def _montar_texto_consulta(plano: dict, valor) -> str:
+    tipo_consulta = str(plano.get("tipo_consulta", "")).strip().lower()
+    categoria = str(plano.get("categoria", "")).strip()
+    periodo = _rotulo_periodo(str(plano.get("periodo", "mes_atual")).strip().lower())
+    valor_fmt = _formatar_moeda_br(valor)
+
+    if tipo_consulta == "gasto_categoria":
+        if categoria:
+            return f"Você gastou {valor_fmt} com {categoria} {periodo}."
+        return f"Você gastou {valor_fmt} {periodo}."
+    if tipo_consulta == "gasto_total":
+        return f"Você gastou {valor_fmt} {periodo}."
+    if tipo_consulta == "receita_categoria":
+        if categoria:
+            return f"Você recebeu {valor_fmt} de {categoria} {periodo}."
+        return f"Você recebeu {valor_fmt} {periodo}."
+    if tipo_consulta == "receita_total":
+        return f"Você recebeu {valor_fmt} {periodo}."
+    if tipo_consulta == "saldo_periodo":
+        return f"Saldo {periodo}: {valor_fmt}."
+    return valor_fmt
+
+
+async def _processar_consulta_natural(interaction: discord.Interaction, texto_usuario: str) -> bool:
+    if not parece_consulta_financeira(texto_usuario):
+        return False
+
+    await interaction.response.defer(thinking=True)
+    plano = await asyncio.to_thread(interpretar_consulta_financeira, texto_usuario)
+
+    if not plano or str(plano.get("tipo", "")).lower() != "consulta":
+        return False
+
+    try:
+        query, params = construir_consulta_financeira(plano)
+    except Exception:
+        return False
+
+    resultado = await asyncio.to_thread(executar_sql_parametrizado, query, params)
+    if not resultado.get("ok"):
+        await interaction.followup.send(f"❌ Erro ao executar a consulta:\n```\n{resultado['erro'][:1800]}\n```")
+        return True
+
+    if resultado.get("tipo") == "select" and len(resultado.get("linhas", [])) == 1 and len(resultado.get("colunas", [])) == 1:
+        valor = next(iter(resultado["linhas"][0].values()))
+        await interaction.followup.send(_montar_texto_consulta(plano, valor))
+        return True
+
+    conteudo, arquivo = _montar_resposta_sql(resultado, int(plano.get("limite") or 20))
+    await interaction.followup.send(conteudo, file=arquivo) if arquivo else await interaction.followup.send(conteudo)
+    return True
+
+
 @bot.tree.command(name="sql", description="Executa uma query SQL direto no banco (PostgreSQL)")
 @app_commands.describe(
     query="Query SQL a executar. Ex: SELECT * FROM compras_cartao ORDER BY id DESC LIMIT 5",
@@ -747,6 +830,32 @@ async def on_message(message: discord.Message):
         async with message.channel.typing():
             conteudo, arquivo = _montar_resposta_sql(executar_sql_livre(query))
         await message.reply(conteudo, file=arquivo) if arquivo else await message.reply(conteudo)
+        return
+
+    if is_authorized_user and parece_consulta_financeira(message.content):
+        async with message.channel.typing():
+            plano = await asyncio.to_thread(interpretar_consulta_financeira, message.content)
+            if plano and str(plano.get("tipo", "")).lower() == "consulta":
+                try:
+                    query, params = construir_consulta_financeira(plano)
+                except Exception:
+                    query = None
+                    params = None
+                if query is not None:
+                    resultado = await asyncio.to_thread(executar_sql_parametrizado, query, params)
+                    if resultado.get("ok"):
+                        if resultado.get("tipo") == "select" and len(resultado.get("linhas", [])) == 1 and len(resultado.get("colunas", [])) == 1:
+                            valor = next(iter(resultado["linhas"][0].values()))
+                            await message.reply(_montar_texto_consulta(plano, valor))
+                        else:
+                            conteudo, arquivo = _montar_resposta_sql(resultado, int(plano.get("limite") or 20))
+                            await message.reply(conteudo, file=arquivo) if arquivo else await message.reply(conteudo)
+                        return
+                    await message.reply(f"❌ Erro ao executar a consulta:\n```\n{resultado['erro'][:1800]}\n```")
+                    return
+
+        # Se parecia pergunta, mas não deu para transformar em consulta segura, não cai no parser de lançamento.
+        await message.reply("❌ Não consegui transformar isso em uma consulta financeira. Tente algo como: `quanto eu gastei com comida esse mês?`")
         return
 
     # Ignora comandos de barra e mensagens vazias (anexos puros).
