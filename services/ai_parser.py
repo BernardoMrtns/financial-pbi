@@ -568,7 +568,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "gasto_total":
         sql = f"""
-            SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0), 2) AS total
+                        SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND {filtro_periodo}
@@ -577,7 +577,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "gasto_categoria":
         sql = f"""
-            SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0), 2) AS total
+                        SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND lower(categoria) = lower(:categoria)
@@ -587,7 +587,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "receita_total":
         sql = f"""
-            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0), 2) AS total
+                        SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_entrada)
               AND {filtro_periodo}
@@ -596,7 +596,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "receita_categoria":
         sql = f"""
-            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0), 2) AS total
+                        SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_entrada)
               AND lower(categoria) = lower(:categoria)
@@ -606,7 +606,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "saldo_periodo":
         sql = f"""
-            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0), 2) AS saldo
+            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS saldo
             FROM fluxo_caixa
             WHERE {filtro_periodo}
         """
@@ -614,7 +614,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
 
     if tipo_consulta == "top_categorias":
         sql = f"""
-            SELECT categoria, ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0), 2) AS total
+                        SELECT categoria, ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND {filtro_periodo}
