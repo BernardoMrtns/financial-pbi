@@ -20,6 +20,7 @@ from services.ai_parser import (
     interpretar_consulta_financeira,
     interpretar_gasto_com_ia,
     parece_consulta_financeira,
+    rotular_periodo_consulta,
 )
 from database import (
     atualizar_registro_db,
@@ -480,14 +481,7 @@ def _formatar_moeda_br(valor) -> str:
 
 
 def _rotulo_periodo(periodo: str) -> str:
-    rotulos = {
-        "mes_atual": "neste mês",
-        "mes_anterior": "no mês passado",
-        "ano_atual": "neste ano",
-        "ultimos_30_dias": "nos últimos 30 dias",
-        "todos": "em todo o histórico",
-    }
-    return rotulos.get(periodo, "neste período")
+    return rotular_periodo_consulta(periodo)
 
 
 def _montar_texto_consulta(plano: dict, valor) -> str:
@@ -524,7 +518,7 @@ async def _processar_consulta_natural(interaction: discord.Interaction, texto_us
         return False
 
     try:
-        query, params = construir_consulta_financeira(plano)
+        query, params = construir_consulta_financeira(plano, texto_usuario)
     except Exception:
         return False
 
@@ -837,7 +831,7 @@ async def on_message(message: discord.Message):
             plano = await asyncio.to_thread(interpretar_consulta_financeira, message.content)
             if plano and str(plano.get("tipo", "")).lower() == "consulta":
                 try:
-                    query, params = construir_consulta_financeira(plano)
+                    query, params = construir_consulta_financeira(plano, message.content)
                 except Exception:
                     query = None
                     params = None

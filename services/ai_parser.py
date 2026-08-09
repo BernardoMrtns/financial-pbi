@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime, timedelta
 from google import genai  # pyright: ignore[reportMissingImports]
 from google.genai import types  # pyright: ignore[reportMissingImports]
 from config import GEMINI_API_KEY, TIPO_ENTRADA, TIPO_SAIDA
@@ -27,7 +28,21 @@ _CATEGORIAS_COMPRA = [
     "Outros",
 ]
 
-_PERIODOS_VALIDOS = {"mes_atual", "mes_anterior", "ano_atual", "ultimos_30_dias", "todos"}
+_MES_POR_NOME = {
+    "janeiro": 1,
+    "fevereiro": 2,
+    "marco": 3,
+    "março": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
+}
 
 
 def _normalizar_texto(texto: str) -> str:
@@ -51,6 +66,152 @@ def parece_consulta_financeira(texto_usuario: str) -> bool:
         return True
 
     return False
+
+
+def _parse_data_textual(valor: str) -> datetime | None:
+    texto = _normalizar_texto(valor)
+    if not texto:
+        return None
+
+    formato_iso = re.search(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", texto)
+    if formato_iso:
+        ano, mes, dia = map(int, formato_iso.groups())
+        try:
+            return datetime(ano, mes, dia)
+        except ValueError:
+            return None
+
+    formato_br = re.search(r"\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b", texto)
+    if formato_br:
+        dia, mes, ano = formato_br.groups()
+        ano_int = int(ano) if ano else datetime.now().year
+        if ano_int < 100:
+            ano_int += 2000
+        try:
+            return datetime(ano_int, int(mes), int(dia))
+        except ValueError:
+            return None
+
+    return None
+
+
+def _rotulo_periodo_texto(periodo: str) -> str:
+    texto = _normalizar_texto(periodo)
+    if not texto:
+        return "neste período"
+    if any(palavra in texto for palavra in ("semana", "últimos 7 dias", "ultimos 7 dias")):
+        return "nesta semana"
+    if any(palavra in texto for palavra in ("ontem",)):
+        return "ontem"
+    if any(palavra in texto for palavra in ("hoje",)):
+        return "hoje"
+    if any(palavra in texto for palavra in ("mês", "mes", "últimos 30 dias", "ultimos 30 dias")):
+        return "neste mês"
+    if any(palavra in texto for palavra in ("ano",)):
+        return "neste ano"
+    if texto.startswith(("desde ", "a partir de ", "entre ", "de ")):
+        return "nesse período"
+    return periodo.strip() or "neste período"
+
+
+def _construir_filtro_periodo(texto_usuario: str, periodo_bruto: str) -> tuple[str, dict, str]:
+    texto = _normalizar_texto(f"{texto_usuario} {periodo_bruto}")
+
+    if any(palavra in texto for palavra in ("hoje", "hoje mesmo")):
+        return "CAST(data_competencia AS DATE) = CURRENT_DATE::date", {}, "hoje"
+
+    if any(palavra in texto for palavra in ("ontem", "ontem a noite", "ontem à noite")):
+        return "CAST(data_competencia AS DATE) = (CURRENT_DATE - INTERVAL '1 day')::date", {}, "ontem"
+
+    if any(palavra in texto for palavra in ("essa semana", "esta semana", "nesta semana", "semana atual", "últimos 7 dias", "ultimos 7 dias")):
+        return (
+            "CAST(data_competencia AS DATE) >= DATE_TRUNC('week', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week')::date",
+            {},
+            "nesta semana",
+        )
+
+    if any(palavra in texto for palavra in ("semana passada", "na semana passada", "última semana", "ultima semana")):
+        return (
+            "CAST(data_competencia AS DATE) >= (DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '1 week')::date AND CAST(data_competencia AS DATE) < DATE_TRUNC('week', CURRENT_DATE)::date",
+            {},
+            "na semana passada",
+        )
+
+    if any(palavra in texto for palavra in ("esse mês", "este mês", "neste mês", "mes atual", "mês atual")):
+        return (
+            "CAST(data_competencia AS DATE) >= DATE_TRUNC('month', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::date",
+            {},
+            "neste mês",
+        )
+
+    if any(palavra in texto for palavra in ("mês passado", "mes passado", "último mês", "ultimo mês", "mes anterior")):
+        return (
+            "CAST(data_competencia AS DATE) >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::date AND CAST(data_competencia AS DATE) < DATE_TRUNC('month', CURRENT_DATE)::date",
+            {},
+            "no mês passado",
+        )
+
+    if any(palavra in texto for palavra in ("este ano", "neste ano", "ano atual")):
+        return (
+            "CAST(data_competencia AS DATE) >= DATE_TRUNC('year', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year')::date",
+            {},
+            "neste ano",
+        )
+
+    if any(palavra in texto for palavra in ("últimos 30 dias", "ultimos 30 dias")):
+        return (
+            "CAST(data_competencia AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::date AND CAST(data_competencia AS DATE) <= CURRENT_DATE::date",
+            {},
+            "nos últimos 30 dias",
+        )
+
+    if any(palavra in texto for palavra in ("todo o histórico", "todo historico", "todos", "sempre", "histórico", "historico")):
+        return "1 = 1", {}, "em todo o histórico"
+
+    intervalo = re.search(r"\b(?:desde|a partir de|de)\s+(.+?)\s+(?:até|ate|a)\s+(.+?)\b", texto)
+    if intervalo:
+        inicio = _parse_data_textual(intervalo.group(1))
+        fim = _parse_data_textual(intervalo.group(2))
+        if inicio and fim:
+            return (
+                "CAST(data_competencia AS DATE) BETWEEN :data_inicio AND :data_fim",
+                {"data_inicio": inicio.date(), "data_fim": fim.date()},
+                f"de {inicio.strftime('%d/%m/%Y')} até {fim.strftime('%d/%m/%Y')}",
+            )
+
+    desde = re.search(r"\b(?:desde|a partir de)\s+(.+)$", texto)
+    if desde:
+        inicio = _parse_data_textual(desde.group(1))
+        if inicio:
+            return (
+                "CAST(data_competencia AS DATE) >= :data_inicio",
+                {"data_inicio": inicio.date()},
+                f"desde {inicio.strftime('%d/%m/%Y')}",
+            )
+
+    mes_nome = re.search(r"\b(?:em|no|na|este|neste|esse|nesse)\s+(janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b", texto)
+    if mes_nome:
+        mes = _MES_POR_NOME[mes_nome.group(1)]
+        ano = datetime.now().year
+        data_inicio = datetime(ano, mes, 1).date()
+        if mes == 12:
+            data_fim = datetime(ano + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            data_fim = datetime(ano, mes + 1, 1).date() - timedelta(days=1)
+        return (
+            "CAST(data_competencia AS DATE) BETWEEN :data_inicio AND :data_fim",
+            {"data_inicio": data_inicio, "data_fim": data_fim},
+            f"em {mes_nome.group(1)}",
+        )
+
+    if any(palavra in texto for palavra in ("sem data", "sem período", "sem periodo")):
+        return "1 = 1", {}, "em todo o histórico"
+
+    return (
+        "CAST(data_competencia AS DATE) >= DATE_TRUNC('month', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::date",
+        {},
+        "neste mês",
+    )
 
 def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
     prompt = f"""
@@ -449,13 +610,9 @@ def interpretar_consulta_financeira(texto_usuario: str, temperatura: float = 0.1
     - "top_categorias"
     - "movimentacoes"
 
-    O campo "periodo" pode ser SOMENTE:
-
-    - "mes_atual"
-    - "mes_anterior"
-    - "ano_atual"
-    - "ultimos_30_dias"
-    - "todos"
+    O campo "periodo" deve copiar a referência temporal da pergunta quando houver.
+    Exemplos: "essa semana", "mês passado", "desde 1/8", "entre 1/8 e 7/8".
+    Se não houver referência temporal clara, deixe vazio.
 
     ==================================================
     HIERARQUIA OBRIGATÓRIA
@@ -492,6 +649,10 @@ def interpretar_consulta_financeira(texto_usuario: str, temperatura: float = 0.1
     tipo = "Consulta"
     tipo_consulta = "movimentacoes"
 
+    Regra de período:
+    - Preserve a forma como o usuário escreveu a janela temporal sempre que possível.
+    - Não force datas em um conjunto fechado de opções.
+
     ==================================================
     REGRAS DE NORMALIZAÇÃO
     ==================================================
@@ -526,7 +687,7 @@ def interpretar_consulta_financeira(texto_usuario: str, temperatura: float = 0.1
                     "movimentacoes",
                 ],
             },
-            "periodo": {"type": "STRING", "enum": sorted(_PERIODOS_VALIDOS)},
+            "periodo": {"type": "STRING"},
             "categoria": {"type": "STRING"},
             "limite": {"type": "INTEGER"},
         },
@@ -549,60 +710,57 @@ def interpretar_consulta_financeira(texto_usuario: str, temperatura: float = 0.1
         return None
 
 
-def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
+def rotular_periodo_consulta(periodo: str) -> str:
+    """Produz um rótulo curto e humano para a janela temporal da consulta."""
+    return _rotulo_periodo_texto(periodo)
+
+
+def construir_consulta_financeira(plano: dict, texto_usuario: str = "") -> tuple[str, dict]:
     """Transforma o plano normalizado em SQL parametrizado para o consolidado."""
 
     tipo_consulta = str(plano.get("tipo_consulta", "")).strip().lower()
-    periodo = str(plano.get("periodo", "mes_atual")).strip().lower()
+    periodo = str(plano.get("periodo", "")).strip()
     categoria = str(plano.get("categoria", "")).strip()
     limite = plano.get("limite") or 5
-
-    filtros_periodo = {
-        "mes_atual": "CAST(data_competencia AS DATE) >= DATE_TRUNC('month', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::date",
-        "mes_anterior": "CAST(data_competencia AS DATE) >= (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::date AND CAST(data_competencia AS DATE) < DATE_TRUNC('month', CURRENT_DATE)::date",
-        "ano_atual": "CAST(data_competencia AS DATE) >= DATE_TRUNC('year', CURRENT_DATE)::date AND CAST(data_competencia AS DATE) < (DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year')::date",
-        "ultimos_30_dias": "CAST(data_competencia AS DATE) >= (CURRENT_DATE - INTERVAL '30 days')::date AND CAST(data_competencia AS DATE) <= CURRENT_DATE::date",
-        "todos": "1 = 1",
-    }
-    filtro_periodo = filtros_periodo.get(periodo, filtros_periodo["mes_atual"])
+    filtro_periodo, params_periodo, _ = _construir_filtro_periodo(texto_usuario, periodo)
 
     if tipo_consulta == "gasto_total":
         sql = f"""
-                        SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
+            SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND {filtro_periodo}
         """
-        return sql, {"tipo_saida": TIPO_SAIDA}
+        return sql, {"tipo_saida": TIPO_SAIDA, **params_periodo}
 
     if tipo_consulta == "gasto_categoria":
         sql = f"""
-                        SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
+            SELECT ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND lower(categoria) = lower(:categoria)
               AND {filtro_periodo}
         """
-        return sql, {"tipo_saida": TIPO_SAIDA, "categoria": categoria}
+        return sql, {"tipo_saida": TIPO_SAIDA, "categoria": categoria, **params_periodo}
 
     if tipo_consulta == "receita_total":
         sql = f"""
-                        SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
+            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_entrada)
               AND {filtro_periodo}
         """
-        return sql, {"tipo_entrada": TIPO_ENTRADA}
+        return sql, {"tipo_entrada": TIPO_ENTRADA, **params_periodo}
 
     if tipo_consulta == "receita_categoria":
         sql = f"""
-                        SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
+            SELECT ROUND(COALESCE(SUM(valor_fluxo), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_entrada)
               AND lower(categoria) = lower(:categoria)
               AND {filtro_periodo}
         """
-        return sql, {"tipo_entrada": TIPO_ENTRADA, "categoria": categoria}
+        return sql, {"tipo_entrada": TIPO_ENTRADA, "categoria": categoria, **params_periodo}
 
     if tipo_consulta == "saldo_periodo":
         sql = f"""
@@ -610,11 +768,11 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
             FROM fluxo_caixa
             WHERE {filtro_periodo}
         """
-        return sql, {}
+        return sql, params_periodo
 
     if tipo_consulta == "top_categorias":
         sql = f"""
-                        SELECT categoria, ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
+            SELECT categoria, ROUND(COALESCE(SUM(ABS(valor_fluxo)), 0)::numeric, 2) AS total
             FROM fluxo_caixa
             WHERE lower(tipo) = lower(:tipo_saida)
               AND {filtro_periodo}
@@ -622,7 +780,7 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
             ORDER BY total DESC, categoria ASC
             LIMIT :limite
         """
-        return sql, {"tipo_saida": TIPO_SAIDA, "limite": int(limite)}
+        return sql, {"tipo_saida": TIPO_SAIDA, "limite": int(limite), **params_periodo}
 
     if tipo_consulta == "movimentacoes":
         sql = f"""
@@ -632,6 +790,6 @@ def construir_consulta_financeira(plano: dict) -> tuple[str, dict]:
             ORDER BY data_competencia DESC, descricao DESC
             LIMIT :limite
         """
-        return sql, {"limite": int(limite)}
+        return sql, {"limite": int(limite), **params_periodo}
 
     raise ValueError(f"Tipo de consulta não suportado: {tipo_consulta}")

@@ -48,6 +48,7 @@ from services.ai_parser import (
     construir_consulta_financeira,
     interpretar_consulta_financeira,
     parece_consulta_financeira,
+    rotular_periodo_consulta,
 )
 from database import (
     adicionar_linha_db,
@@ -146,14 +147,7 @@ def _formatar_moeda_br(valor) -> str:
 
 
 def _rotulo_periodo(periodo: str) -> str:
-    rotulos = {
-        "mes_atual": "neste mês",
-        "mes_anterior": "no mês passado",
-        "ano_atual": "neste ano",
-        "ultimos_30_dias": "nos últimos 30 dias",
-        "todos": "em todo o histórico",
-    }
-    return rotulos.get(periodo, "neste período")
+    return rotular_periodo_consulta(periodo)
 
 
 def _montar_texto_consulta(plano: dict, valor) -> str:
@@ -202,7 +196,7 @@ async def _processar_consulta_natural(update, context, texto_usuario: str, forca
         return False
 
     try:
-        query, params = construir_consulta_financeira(plano)
+        query, params = construir_consulta_financeira(plano, texto_usuario)
     except Exception:
         return False
 
