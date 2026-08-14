@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 import requests
+import datetime
 from pandas.tseries.offsets import DateOffset
 from requests import RequestException
 
@@ -86,21 +87,35 @@ def calcular_mes_competencia(data_compra: pd.Timestamp, cartao: str = "") -> pd.
         return pd.NaT
 
     nome_cartao = _normalizar_chave_cartao(cartao)
-    dia_vencimento = VENCIMENTO_CARTOES.get(nome_cartao) or 8
-    dias_antes_vencimento = DIAS_FECHAMENTO_CARTOES.get(nome_cartao) or 8
+    dia_vencimento = VENCIMENTO_CARTOES.get(nome_cartao)
+    dias_antes_vencimento = DIAS_FECHAMENTO_CARTOES.get(nome_cartao)
 
-    # A compra entra na fatura com vencimento no mes seguinte ao da compra,
-    # salvo quando ela acontece depois do fechamento dessa fatura.
-    mes_vencimento_base = data_compra + pd.DateOffset(months=1)
-    data_vencimento_base = _criar_timestamp_cartao(mes_vencimento_base.year, mes_vencimento_base.month, dia_vencimento)
-    data_fechamento_base = data_vencimento_base - pd.Timedelta(days=dias_antes_vencimento)
+    # Fallback se a informação não existir ou for None
+    if not dia_vencimento or not dias_antes_vencimento:
+        return data_compra.to_period("M").to_timestamp()
 
-    if data_compra <= data_fechamento_base:
-        return data_vencimento_base.to_period("M").to_timestamp()
+    ano, mes = data_compra.year, data_compra.month
 
-    mes_seguinte = data_vencimento_base + pd.DateOffset(months=1)
-    data_vencimento_seguinte = _criar_timestamp_cartao(mes_seguinte.year, mes_seguinte.month, dia_vencimento)
-    return data_vencimento_seguinte.to_period("M").to_timestamp()
+    # Testa a fatura do mês atual e rola para os próximos 
+    # até encontrar a janela exata onde a compra se encaixa
+    for i in range(3):
+        mes_teste = mes + i
+        ano_teste = ano
+        
+        # Ajusta a virada de ano
+        if mes_teste > 12:
+            mes_teste -= 12
+            ano_teste += 1
+            
+        data_vencimento = _criar_timestamp_cartao(ano_teste, mes_teste, dia_vencimento)
+        data_fechamento = data_vencimento - pd.Timedelta(days=dias_antes_vencimento)
+
+        # Se a compra foi feita antes ou no dia do fechamento, entra nesta fatura
+        if data_compra <= data_fechamento:
+            return data_vencimento.to_period("M").to_timestamp()
+
+    # Fallback de segurança 
+    return data_compra.to_period("M").to_timestamp()
 
 
 def obter_cdi_historico(data_inicio: pd.Timestamp) -> pd.DataFrame:
