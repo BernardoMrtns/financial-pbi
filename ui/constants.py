@@ -47,7 +47,7 @@ PRIORIDADES: list[str] = ["Baixa", "Media", "Alta"]
 PERIODICIDADES: list[str] = ["Mensal", "Anual"]
 
 # Classe do ativo em Investimentos. Discrimina o roteamento de cotacao no ETL:
-# CDI acumula pela serie do Bacen, Cripto consulta a CoinGecko, ETF/Acao a brapi.
+# CDI acumula pela serie do Bacen, Cripto consulta a CoinGecko, ETF/Acao o Yahoo.
 # O ticker em si continua na coluna Tipo (BTC, ETH, BOVA11, PETR4).
 CLASSES_INVESTIMENTO: list[str] = ["CDI", "Cripto", "ETF", "Acao"]
 

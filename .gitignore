@@ -4,3 +4,8 @@ __pycache__/
 credentials.json
 config.py
 logs/
+
+# Estado local do Power BI Desktop: recriado a cada abertura, nao faz parte
+# do modelo (isso e o model.bim + os visual.json). O cache.abf sozinho e ~600KB
+# de binario que muda em toda sessao.
+.pbi/

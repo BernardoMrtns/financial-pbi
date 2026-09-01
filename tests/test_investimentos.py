@@ -17,7 +17,7 @@ from processors.patrimonio import PatrimonioCalculator
 @pytest.fixture
 def sem_rede(monkeypatch):
     """Intercepta as duas fontes de cotacao e registra o que foi consultado."""
-    chamadas = {"coingecko": [], "brapi": []}
+    chamadas = {"coingecko": [], "b3": []}
 
     def fake_resolver(self, ticker):
         chamadas["coingecko"].append(str(ticker).upper())
@@ -26,13 +26,13 @@ def sem_rede(monkeypatch):
     def fake_precos(self, coin_ids):
         return {coin_id: 10.0 for coin_id in coin_ids}
 
-    def fake_brapi(tickers):
-        chamadas["brapi"].extend(tickers)
+    def fake_b3(tickers):
+        chamadas["b3"].extend(tickers)
         return {t: {"preco": 100.0, "nome": f"Ativo {t}"} for t in tickers}
 
     monkeypatch.setattr(PatrimonioCalculator, "_resolver_ativo_cripto", fake_resolver)
     monkeypatch.setattr(PatrimonioCalculator, "_buscar_precos_atuais", fake_precos)
-    monkeypatch.setattr(mod, "buscar_cotacoes", fake_brapi)
+    monkeypatch.setattr(mod, "buscar_cotacoes", fake_b3)
     monkeypatch.setattr(PatrimonioCalculator, "_calcular_cdi", lambda self: pd.DataFrame())
     return chamadas
 
@@ -57,7 +57,7 @@ def test_ticker_da_b3_nao_vai_para_a_coingecko(sem_rede):
     resultado = calc.processar_tudo()
 
     assert sem_rede["coingecko"] == []
-    assert sem_rede["brapi"] == ["BOVA11"]
+    assert sem_rede["b3"] == ["BOVA11"]
     assert resultado["cripto"].empty
     assert list(resultado["renda_variavel"]["Ticker"]) == ["BOVA11"]
 
@@ -109,7 +109,7 @@ def test_cripto_continua_indo_para_a_coingecko(sem_rede):
     resultado = calc.processar_tudo()
 
     assert sem_rede["coingecko"] == ["ETH"]
-    assert sem_rede["brapi"] == []
+    assert sem_rede["b3"] == []
     assert list(resultado["cripto"]["Ticker"]) == ["ETH"]
 
 
@@ -158,4 +158,4 @@ def test_sem_renda_variavel_a_tabela_sai_vazia(sem_rede):
     calc = PatrimonioCalculator(_df([{"Classe": "Cripto", "Tipo": "ETH"}]))
 
     assert calc.processar_tudo()["renda_variavel"].empty
-    assert sem_rede["brapi"] == []
+    assert sem_rede["b3"] == []

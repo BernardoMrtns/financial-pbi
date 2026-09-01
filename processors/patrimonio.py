@@ -12,7 +12,7 @@ from config import (
     REQUEST_TIMEOUT_SECONDS,
     SATOSHIS_PER_BITCOIN,
 )
-from services.brapi import buscar_cotacoes
+from services.cotacoes_b3 import buscar_cotacoes
 from utils import (
     calcular_fator_cdi_periodo,
     converter_numero_flexivel,
@@ -298,7 +298,7 @@ class PatrimonioCalculator:
         return pd.DataFrame(linhas)
 
     def _calcular_renda_variavel_snapshot(self) -> pd.DataFrame:
-        """Snapshot de ETFs e acoes da B3, cotados em BRL pela brapi."""
+        """Snapshot de ETFs e acoes da B3, cotados em BRL (ver services/cotacoes_b3)."""
         df_rv = self.df_inv[self.df_inv["Classe"].isin(CLASSES_RENDA_VARIAVEL)].copy()
         df_rv = df_rv[df_rv["Tipo"].ne("")]
         if df_rv.empty:

@@ -20,7 +20,7 @@ Pipeline de finanças pessoais com integração ao Google Sheets para:
     - CDI com série histórica Bacen,
     - BTC com conversão correta de satoshis,
     - Criptos por ticker usando CoinGecko,
-    - ETFs e ações da B3 por ticker usando brapi.dev.
+    - ETFs e ações da B3 por ticker usando Yahoo Finance.
 - Escrita robusta no Sheets com:
     - estratégia de swap para snapshots,
     - append em lote para histórico incremental.
@@ -64,8 +64,9 @@ Ajuste os parâmetros em `config.py`:
 Importante:
 
 - `SATOSHIS_PER_BITCOIN` está definido como `100_000_000` (valor correto).
-- `BRAPI_TOKEN` (variável de ambiente) habilita a cotação de ETFs e ações da B3.
-  Sem ele, o restante do patrimônio continua sendo calculado normalmente.
+- Cotação de ETFs e ações da B3 vem do Yahoo Finance: sem token e sem custo.
+  Se a fonte ficar indisponível, a renda variável é pulada com um aviso no log e
+  o restante do patrimônio (CDI, BTC, cripto) continua sendo calculado.
 - `VENCIMENTO_CARTOES` define o dia de vencimento de cada cartão.
 - `DIAS_FECHAMENTO_CARTOES` define quantos dias antes do vencimento a fatura costuma fechar; quando não houver fechamento informado, a rotina usa um fallback conservador.
 
