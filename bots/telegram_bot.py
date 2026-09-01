@@ -59,8 +59,14 @@ from database import (
     ler_tabela_db,
 )
 from services.google_sheets import atualizar_registro_sheets, conectar_google_sheets
+from ui.constants import (
+    CLASSES_INVESTIMENTO,
+    CLASSE_INVESTIMENTO_PADRAO,
+    PERIODICIDADES,
+    PERIODICIDADE_PADRAO,
+)
 from ui.table_image import montar_resposta_sql
-from utils.data_utils import converter_numero_flexivel
+from utils.data_utils import converter_numero_flexivel, resolver_cobranca_assinatura
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -275,6 +281,58 @@ async def gravar_e_confirmar(update, context, aba: str, dados: dict, titulo: str
 # ==========================================
 
 
+def _classe_investimento(valor) -> str:
+    """Casa o texto recebido com a lista canonica de classes, sem depender de caixa."""
+    alvo = str(valor or "").strip().upper()
+    for classe in CLASSES_INVESTIMENTO:
+        if classe.upper() == alvo:
+            return classe
+    return CLASSE_INVESTIMENTO_PADRAO
+
+
+def _periodicidade(valor) -> str:
+    alvo = str(valor or "").strip().upper()
+    for periodicidade in PERIODICIDADES:
+        if periodicidade.upper() == alvo:
+            return periodicidade
+    return PERIODICIDADE_PADRAO
+
+
+def _montar_assinatura(
+    *, nome, valor, proxima_cobranca, categoria, cartao, periodicidade
+) -> tuple[dict, str | None]:
+    """Mesma linha de Assinaturas que o bot do Discord monta (ver ui/modals.py).
+
+    Nao reaproveita ui.modals diretamente porque aquele modulo importa discord.
+    """
+    aviso = None
+    cobranca = resolver_cobranca_assinatura(proxima_cobranca)
+
+    if cobranca is None:
+        agora = datetime.now()
+        inicio, dia = agora.strftime("%Y-%m-%d"), agora.day
+        aviso = (
+            f"⚠️ Não consegui ler <code>{html.escape(str(proxima_cobranca))}</code> "
+            f"como data (use DD/MM/AAAA). Usei hoje ({agora.strftime('%d/%m/%Y')}) "
+            "como primeira cobrança."
+        )
+    else:
+        inicio, dia = cobranca
+
+    dados = {
+        "Nome": str(nome).strip(),
+        "Categoria": categoria,
+        "Valor": converter_numero_flexivel(str(valor)),
+        "Periodicidade": _periodicidade(periodicidade),
+        "DiaCobranca": dia,
+        "Cartao": cartao,
+        "Ativa": "TRUE",
+        "Inicio": inicio,
+        "Fim": None,
+    }
+    return dados, aviso
+
+
 def _hoje() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
@@ -357,28 +415,25 @@ async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         elif acao == "invest":
             dados = {
                 "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Classe": _classe_investimento(payload.get("classe")),
                 "Tipo": str(payload["tipo"]).upper(),
                 "Operacao": payload["operacao"],
                 "Valor": converter_numero_flexivel(payload["valor"]),
-                "QuantidadeCripto": converter_numero_flexivel(payload.get("qtd_cripto", "0")),
+                "Quantidade": converter_numero_flexivel(payload.get("qtd", "0")),
             }
             await gravar_e_confirmar(update, context, "Investimentos", dados, "📈 <b>Investimento registrado!</b>")
 
         elif acao == "assinatura":
-            try:
-                dia = min(31, max(1, int(str(payload.get("dia", "1")).strip() or "1")))
-            except ValueError:
-                dia = 1
-            dados = {
-                "Nome": str(payload["nome"]).strip(),
-                "Categoria": payload["categoria"],
-                "Valor": converter_numero_flexivel(payload["valor"]),
-                "DiaCobranca": dia,
-                "Cartao": payload["cartao"],
-                "Ativa": "TRUE",
-                "Inicio": _hoje(),
-                "Fim": None,
-            }
+            dados, aviso = _montar_assinatura(
+                nome=payload["nome"],
+                valor=payload["valor"],
+                proxima_cobranca=payload.get("proxima_cobranca", ""),
+                categoria=payload["categoria"],
+                cartao=payload["cartao"],
+                periodicidade=payload.get("periodicidade"),
+            )
+            if aviso:
+                await responder(update, context, aviso)
             await gravar_e_confirmar(update, context, "Assinaturas", dados, "🔔 <b>Assinatura criada!</b>")
 
         elif acao == "fatura":
@@ -626,7 +681,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "🟢 <code>/receita [valor] [conta] [categoria] [descrição]</code>\n"
         "💳 <code>/cartao [total] [cartao] [parcelas] [categoria] [descrição]</code>\n"
         "🔁 <code>/pix [total] [entrada] [pagas] [categoria] [descrição]</code>\n"
-        "📈 <code>/invest [tipo] [op] [valor] [qtd_cripto]</code>\n\n"
+        "📈 <code>/invest [classe] [ticker] [op] [valor] [qtd]</code>\n\n"
         "🔄 <b>Edições:</b>\n"
         "📅 <code>/fatura_update [cartao] [nova_data]</code>\n"
         "🔢 <code>/pix_update [id_compra] [qtd_pagas]</code>\n"
@@ -710,15 +765,21 @@ async def pix_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 @restrito
 async def invest_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if len(context.args) < 3:
-        return await responder(update, context, "⚠️ Formato: /invest [tipo] [op] [valor] [qtd_cripto]")
-    qtd = converter_numero_flexivel(context.args[3]) if len(context.args) > 3 else 0.0
+    if len(context.args) < 4:
+        return await responder(
+            update,
+            context,
+            "⚠️ Formato: /invest [classe] [ticker] [op] [valor] [qtd]\n"
+            f"Classes: {', '.join(CLASSES_INVESTIMENTO)}",
+        )
+    qtd = converter_numero_flexivel(context.args[4]) if len(context.args) > 4 else 0.0
     dados = {
         "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Tipo": context.args[0].upper(),
-        "Operacao": context.args[1],
-        "Valor": converter_numero_flexivel(context.args[2]),
-        "QuantidadeCripto": qtd,
+        "Classe": _classe_investimento(context.args[0]),
+        "Tipo": context.args[1].upper(),
+        "Operacao": context.args[2],
+        "Valor": converter_numero_flexivel(context.args[3]),
+        "Quantidade": qtd,
     }
     await gravar_e_confirmar(update, context, "Investimentos", dados, "📈 <b>Investimento registrado!</b>")
 
@@ -839,8 +900,9 @@ async def mensagem_livre_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
         aba_destino = "Investimentos"
         dados_finais = {
             "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Classe": _classe_investimento(dados_ia.get("classe_investimento")),
             "Tipo": dados_ia["tipo_investimento"].upper(), "Operacao": dados_ia["operacao"],
-            "Valor": dados_ia["valor"], "QuantidadeCripto": dados_ia.get("quantidade_cripto", 0.0),
+            "Valor": dados_ia["valor"], "Quantidade": dados_ia.get("quantidade", 0.0),
         }
         titulo = "📈 <b>Investimento registrado!</b>"
     elif tipo_transacao == "pix":

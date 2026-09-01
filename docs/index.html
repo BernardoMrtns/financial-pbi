@@ -435,6 +435,8 @@ const CATEGORIAS_RECEITA = ["Trabalho","Pix Avulso"];
 const CARTOES = ["Inter","Nubank","MercadoPago","PicPay","AmazonPrime"];
 const CONTAS  = ["Inter","Nubank","MercadoPago","PicPay","Dinheiro"];
 const PRIORIDADES = ["Baixa","Media","Alta"];
+const PERIODICIDADES = ["Mensal","Anual"];
+const CLASSES_INVESTIMENTO = ["CDI","Cripto","ETF","Acao"];
 
 const app = document.getElementById("app");
 let appState = {
@@ -707,35 +709,39 @@ function telaWishlist(){
 
 function telaInvest(){
   renderScreen("form", "Novo Investimento", "Aporte ou saque",
-    field("Tipo", `<input id="tipo" placeholder="Ex: Renda Fixa, Cripto">`) +
+    field("Classe", `<select id="classe">${opts(CLASSES_INVESTIMENTO,"Cripto")}</select>`) +
+    field("Ticker", `<input id="tipo" placeholder="Ex: CDI, BTC, BOVA11, PETR4">`) +
     field("Operação", `<select id="operacao"><option>Aporte</option><option>Saque</option></select>`) +
     `<div class="row">` +
       field("Valor", `<input id="valor" inputmode="decimal" placeholder="Ex: 1000">`) +
-      field("Qtd. cripto", `<input id="qtd" inputmode="decimal" value="0">`) +
-    `</div>`, "cadastro");
+      field("Quantidade", `<input id="qtd" inputmode="decimal" value="0">`) +
+    `</div>` +
+    `<div class="hint-line">Quantidade em cotas, ações ou cripto.</div>`, "cadastro");
   setSubmit("💾 Registrar investimento", () => {
-    if (!num(el("tipo").value)) return fail("Informe o tipo.");
+    if (!num(el("tipo").value)) return fail("Informe o ticker.");
     if (!num(el("valor").value)) return fail("Informe o valor.");
-    send({action:"invest", tipo:el("tipo").value, operacao:el("operacao").value,
-      valor:el("valor").value, qtd_cripto:el("qtd").value || "0"});
+    send({action:"invest", classe:el("classe").value, tipo:el("tipo").value,
+      operacao:el("operacao").value, valor:el("valor").value, qtd:el("qtd").value || "0"});
   });
 }
 
 function telaAssinatura(){
-  renderScreen("form", "Nova Assinatura", "Cobrança recorrente mensal",
+  renderScreen("form", "Nova Assinatura", "Cobrança recorrente",
     field("Nome", `<input id="nome" placeholder="Ex: Netflix">`) +
     `<div class="row">` +
-      field("Valor mensal", `<input id="valor" inputmode="decimal" placeholder="Ex: 39,90">`) +
-      field("Dia da cobrança", `<input id="dia" inputmode="numeric" placeholder="15">`) +
+      field("Valor por cobrança", `<input id="valor" inputmode="decimal" placeholder="Ex: 39,90">`) +
+      field("Periodicidade", `<select id="periodicidade">${opts(PERIODICIDADES,"Mensal")}</select>`) +
     `</div>` +
+    field("Próxima cobrança", `<input id="proxima" placeholder="DD/MM/AAAA, ex: 10/03/2027">`) +
     field("Categoria", `<select id="categoria">${opts(CATEGORIAS,"Assinaturas")}</select>`) +
     field("Cartão", `<select id="cartao">${opts(CARTOES,"Inter")}</select>`), "cadastro");
   setSubmit("💾 Criar assinatura", () => {
     if (!num(el("nome").value)) return fail("Informe o nome.");
     if (!num(el("valor").value)) return fail("Informe o valor.");
-    if (!num(el("dia").value)) return fail("Informe o dia da cobrança.");
+    if (!num(el("proxima").value)) return fail("Informe a data da próxima cobrança.");
     send({action:"assinatura", nome:el("nome").value, valor:el("valor").value,
-      dia:el("dia").value, categoria:el("categoria").value, cartao:el("cartao").value});
+      proxima_cobranca:el("proxima").value, periodicidade:el("periodicidade").value,
+      categoria:el("categoria").value, cartao:el("cartao").value});
   });
 }
 

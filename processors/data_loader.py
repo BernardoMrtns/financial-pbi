@@ -13,6 +13,7 @@ RENOMEIOS_DB_PARA_MEMORIA = {
     'data': 'Data', 'descricao': 'Descricao', 'categoria': 'Categoria',
     'cartao': 'Cartao', 'valor_total': 'ValorTotal', 'parcelas': 'Parcelas',
     'valor': 'Valor', 'dia_cobranca': 'DiaCobranca', 'ativa': 'Ativa',
+    'periodicidade': 'Periodicidade', 'classe': 'Classe',
     'inicio': 'Inicio', 'fim': 'Fim', 'nome': 'Nome',
     'valor_entrada': 'ValorEntrada', 'qtd_pagas': 'QtdPagas',
     'conta_destino': 'ContaDestino', 'conta_saida': 'ContaSaida',

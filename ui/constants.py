@@ -42,10 +42,24 @@ CONTAS: list[str] = ["Inter", "Nubank", "MercadoPago", "PicPay", "Dinheiro"]
 
 PRIORIDADES: list[str] = ["Baixa", "Media", "Alta"]
 
+# Periodicidade de cobranca das assinaturas. O ETL traduz para um intervalo em
+# meses (MESES_POR_PERIODICIDADE em processors/fluxo_caixa.py).
+PERIODICIDADES: list[str] = ["Mensal", "Anual"]
+
+# Classe do ativo em Investimentos. Discrimina o roteamento de cotacao no ETL:
+# CDI acumula pela serie do Bacen, Cripto consulta a CoinGecko, ETF/Acao a brapi.
+# O ticker em si continua na coluna Tipo (BTC, ETH, BOVA11, PETR4).
+CLASSES_INVESTIMENTO: list[str] = ["CDI", "Cripto", "ETF", "Acao"]
+
+OPERACOES_INVESTIMENTO: list[str] = ["Aporte", "Saque"]
+
 CATEGORIA_PADRAO = "Outros"
 CATEGORIA_RECEITA_PADRAO = "Pix Avulso"
 CONTA_PADRAO = "Inter"
 PRIORIDADE_PADRAO = "Media"
+PERIODICIDADE_PADRAO = "Mensal"
+CLASSE_INVESTIMENTO_PADRAO = "Cripto"
+OPERACAO_INVESTIMENTO_PADRAO = "Aporte"
 
 
 # --- Identidade visual do painel (cor + emoji por tipo de operacao) ---

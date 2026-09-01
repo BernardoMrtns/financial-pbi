@@ -15,7 +15,7 @@ import discord
 from config import DISCORD_AUTHORIZED_USER_ID
 from utils.logging_config import get_logger
 
-from ui.constants import CARTOES, COR_PAINEL
+from ui.constants import CARTOES, COR_PAINEL, PERIODICIDADES
 from ui.modals import (
     CartaoModal,
     DebitoModal,
@@ -136,7 +136,13 @@ class PainelView(AuthorizedView):
         custom_id="painel:assinatura",
     )
     async def assinatura(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
-        await interaction.response.send_modal(AssinaturaModal())
+        # A periodicidade e escolhida antes do modal porque o Discord limita
+        # modais a 5 componentes e o AssinaturaModal ja usa os cinco.
+        await interaction.response.send_message(
+            "🔔 Com que frequência essa assinatura é cobrada?",
+            view=AssinaturaPeriodicidadeView(),
+            ephemeral=True,
+        )
 
     @discord.ui.button(
         label="Ass. On/Off",
@@ -235,6 +241,32 @@ def painel_embed() -> discord.Embed:
 FaturaConfirm = Callable[[discord.Interaction, str, str], Awaitable[None]]
 PixConfirm = Callable[[discord.Interaction, str, int], Awaitable[None]]
 AssinaturaToggleConfirm = Callable[[discord.Interaction, str, str, bool], Awaitable[None]]
+
+
+class _AssinaturaPeriodicidadeSelect(discord.ui.Select):
+    def __init__(self) -> None:
+        options = [
+            discord.SelectOption(
+                label=p,
+                value=p,
+                emoji="📅" if p == "Mensal" else "🗓️",
+            )
+            for p in PERIODICIDADES
+        ]
+        super().__init__(
+            placeholder="Mensal ou anual...", min_values=1, max_values=1, options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_modal(AssinaturaModal(self.values[0]))
+
+
+class AssinaturaPeriodicidadeView(AuthorizedView):
+    """Passo previo ao AssinaturaModal, que nao tem espaco para mais um campo."""
+
+    def __init__(self) -> None:
+        super().__init__(timeout=180)
+        self.add_item(_AssinaturaPeriodicidadeSelect())
 
 
 class _FaturaSelect(discord.ui.Select):

@@ -41,6 +41,36 @@ def converter_data_flexivel(series: pd.Series, preservar_hora: bool = False) -> 
     return result
 
 
+def converter_data_unica(valor: Any) -> pd.Timestamp | None:
+    """Converte um valor solto em Timestamp, ou None se nao for uma data valida.
+
+    Reaproveita converter_data_flexivel (que opera em Series) para que os bots
+    aceitem exatamente os mesmos formatos que o ETL.
+    """
+    if valor is None:
+        return None
+    convertido = converter_data_flexivel(pd.Series([valor])).iloc[0]
+    return None if pd.isna(convertido) else convertido
+
+
+def resolver_cobranca_assinatura(valor: Any) -> tuple[str, int] | None:
+    """Interpreta a data da proxima cobranca de uma assinatura.
+
+    Devolve (Inicio em ISO, DiaCobranca) ou None se o texto nao for uma data.
+    Exige separador de propósito: o campo antigo pedia so o dia do mes, e um "5"
+    solto seria lido como serial de planilha e viraria uma data de 1900.
+    """
+    texto = str(valor or "").strip()
+    if not texto or not any(sep in texto for sep in ("/", "-")):
+        return None
+
+    data = converter_data_unica(texto)
+    if data is None:
+        return None
+
+    return data.strftime("%Y-%m-%d"), int(data.day)
+
+
 def converter_numero_flexivel(valor: Any) -> Any:
     """Converte números flexíveis, aceitando tanto pd.Series (ETL) quanto valores únicos (Telegram)."""
     

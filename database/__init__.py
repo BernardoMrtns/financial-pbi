@@ -23,6 +23,7 @@ TABELAS_MAP = {
     "InvestimentoCDI": "investimento_cdi",
     "InvestimentoBTC": "investimento_btc",
     "InvestimentoCripto": "investimento_cripto",
+    "InvestimentoRendaVariavel": "investimento_renda_variavel",
     "FaturasPagas": "faturas_pagas",
     "Assinaturas": "assinaturas",
     "Wishlist": "wishlist"

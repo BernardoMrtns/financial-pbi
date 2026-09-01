@@ -339,6 +339,16 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
         - "Aporte"
         - "Saque"
 
+    - Se tipo == "Investimento":
+        classe_investimento deve ser SOMENTE:
+        - "CDI"
+        - "Cripto"
+        - "ETF"
+        - "Acao"
+
+    - Se tipo != "Investimento":
+        classe_investimento = "Cripto" (valor ignorado)
+
     - Se tipo != "Investimento":
         operacao = "Nenhuma"
 
@@ -442,6 +452,22 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
       parcelas = 1
       conta_cartao = "Inter"
 
+    - tipo_investimento e o TICKER do ativo, sempre em maiusculas.
+      Ex: "CDI", "BTC", "ETH", "SOL", "BOVA11", "IVVB11", "PETR4", "ITSA4".
+      NUNCA use nomes genericos como "Renda Fixa" ou "Cripto" aqui.
+
+    - classe_investimento diz de que tipo e o ativo:
+      * "CDI"    -> CDI, renda fixa, tesouro direto, poupanca, caixinha, CDB.
+                    Neste caso tipo_investimento = "CDI".
+      * "Cripto" -> bitcoin, btc, ethereum, satoshi, altcoin, qualquer moeda digital.
+      * "ETF"    -> fundos de indice da B3, tickers terminados em 11.
+                    Ex: BOVA11, IVVB11, SMAL11, HASH11.
+      * "Acao"   -> acoes da B3, tickers terminados em 3, 4 ou 5.
+                    Ex: PETR4, VALE3, ITSA4, BBAS3.
+
+    - quantidade e o numero de unidades do ativo (cotas, acoes ou cripto).
+      Se o usuario nao informar, use 0.
+
     ==================================================
     MENSAGEM DO USUÁRIO
     ==================================================
@@ -524,8 +550,18 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
                 ]
             },
 
-            "quantidade_cripto": {
+            "quantidade": {
                 "type": "NUMBER"
+            },
+
+            "classe_investimento": {
+                "type": "STRING",
+                "enum": [
+                    "CDI",
+                    "Cripto",
+                    "ETF",
+                    "Acao"
+                ]
             },
 
             "valor_entrada": {
@@ -555,7 +591,8 @@ def interpretar_gasto_com_ia(texto_usuario: str, temperatura: float = 0.7):
             "parcelas",
             "tipo_investimento",
             "operacao",
-            "quantidade_cripto",
+            "quantidade",
+            "classe_investimento",
             "valor_entrada",
             "qtd_pagas",
             "prioridade"

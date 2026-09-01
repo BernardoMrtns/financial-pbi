@@ -12,7 +12,7 @@ from datetime import datetime
 
 import discord
 
-from utils.data_utils import converter_numero_flexivel
+from utils.data_utils import converter_numero_flexivel, resolver_cobranca_assinatura
 
 from ui.constants import (
     CARTOES,
@@ -20,6 +20,8 @@ from ui.constants import (
     CATEGORIAS_RECEITA,
     CATEGORIA_PADRAO,
     CATEGORIA_RECEITA_PADRAO,
+    CLASSES_INVESTIMENTO,
+    CLASSE_INVESTIMENTO_PADRAO,
     CONTAS,
     CONTA_PADRAO,
     COR_ASSINATURA,
@@ -27,6 +29,9 @@ from ui.constants import (
     COR_DEBITO,
     COR_PIX,
     COR_RECEITA,
+    OPERACOES_INVESTIMENTO,
+    OPERACAO_INVESTIMENTO_PADRAO,
+    PERIODICIDADE_PADRAO,
 )
 from ui.storage import gravar_e_confirmar
 
@@ -176,53 +181,115 @@ class WishlistModal(discord.ui.Modal, title="⭐ Nova Wishlist"):
 
 
 class InvestModal(discord.ui.Modal, title="📈 Novo Investimento"):
-    tipo = discord.ui.TextInput(label="Tipo", placeholder="Ex: Renda Fixa, Cripto", required=True)
-    operacao = discord.ui.TextInput(label="Operação", placeholder="Aporte ou Saque", required=True)
+    """A Classe define de onde vem a cotacao; Tipo e o ticker do ativo."""
+
+    classe = dropdown(
+        "Classe",
+        CLASSES_INVESTIMENTO,
+        padrao=CLASSE_INVESTIMENTO_PADRAO,
+        descricao="CDI, Cripto, ETF ou Acao",
+    )
+    tipo = discord.ui.TextInput(label="Ticker", placeholder="Ex: CDI, BTC, BOVA11, PETR4", required=True)
+    operacao = dropdown("Operação", OPERACOES_INVESTIMENTO, padrao=OPERACAO_INVESTIMENTO_PADRAO)
     valor = discord.ui.TextInput(label="Valor", placeholder="Ex: 1000", required=True)
-    qtd_cripto = discord.ui.TextInput(label="Quantidade cripto", placeholder="Ex: 0.01", default="0", required=False)
+    quantidade = discord.ui.TextInput(
+        label="Quantidade",
+        placeholder="Cotas, acoes ou cripto. Ex: 0.01",
+        default="0",
+        required=False,
+    )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
         dados = {
             "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Classe": _sel(self.classe, CLASSE_INVESTIMENTO_PADRAO),
             "Tipo": str(self.tipo.value).upper(),
-            "Operacao": str(self.operacao.value),
+            "Operacao": _sel(self.operacao, OPERACAO_INVESTIMENTO_PADRAO),
             "Valor": converter_numero_flexivel(str(self.valor.value)),
-            "QuantidadeCripto": converter_numero_flexivel(str(self.qtd_cripto.value or "0")),
+            "Quantidade": converter_numero_flexivel(str(self.quantidade.value or "0")),
         }
         await gravar_e_confirmar(
             interaction, "Investimentos", dados, titulo="📈 Investimento registrado!", cor=COR_CARTAO
         )
 
 
+def montar_assinatura(
+    *,
+    nome: str,
+    valor: str,
+    proxima_cobranca: str,
+    categoria: str,
+    cartao: str,
+    periodicidade: str,
+) -> tuple[dict, str | None]:
+    """Monta a linha de Assinaturas a partir dos campos crus do formulario.
+
+    Compartilhado pelo modal, pelo slash command e pelo Mini App do Telegram
+    para que os tres produzam exatamente a mesma linha. Devolve (dados, aviso):
+    o aviso e preenchido quando a data nao pode ser lida e caimos em hoje.
+    """
+    aviso = None
+    cobranca = resolver_cobranca_assinatura(proxima_cobranca)
+
+    if cobranca is None:
+        hoje = datetime.now()
+        inicio, dia = hoje.strftime("%Y-%m-%d"), hoje.day
+        aviso = (
+            f"⚠️ Não consegui ler `{proxima_cobranca}` como data (use DD/MM/AAAA). "
+            f"Usei hoje ({hoje.strftime('%d/%m/%Y')}) como primeira cobrança."
+        )
+    else:
+        inicio, dia = cobranca
+
+    dados = {
+        "Nome": str(nome).strip(),
+        "Categoria": categoria,
+        "Valor": converter_numero_flexivel(str(valor)),
+        "Periodicidade": periodicidade,
+        "DiaCobranca": dia,
+        "Cartao": cartao,
+        "Ativa": "TRUE",
+        "Inicio": inicio,
+        "Fim": None,
+    }
+    return dados, aviso
+
+
 class AssinaturaModal(discord.ui.Modal, title="🔔 Nova Assinatura"):
-    """Cria uma assinatura recorrente. Ja nasce ativa, iniciando hoje e sem data de fim
-    (o ETL projeta 3 meses adiante). Use o menu de edicao para pausar/encerrar depois."""
+    """Cria uma assinatura recorrente, ja ativa e sem data de fim.
+
+    A periodicidade chega pronta do Select que abre este modal: o Discord limita
+    modais a 5 componentes e os cinco campos abaixo ja ocupam o teto.
+    """
 
     nome = discord.ui.TextInput(label="Nome da assinatura", placeholder="Ex: Netflix", required=True)
-    valor = discord.ui.TextInput(label="Valor mensal", placeholder="Ex: 39,90", required=True)
-    dia_cobranca = discord.ui.TextInput(
-        label="Dia da cobrança", placeholder="Dia do mês, ex: 15", required=True
+    valor = discord.ui.TextInput(label="Valor por cobrança", placeholder="Ex: 39,90", required=True)
+    proxima_cobranca = discord.ui.TextInput(
+        label="Próxima cobrança",
+        placeholder="DD/MM/AAAA, ex: 10/03/2027",
+        required=True,
     )
     categoria = dropdown("Categoria", CATEGORIAS, padrao="Assinaturas")
     cartao = dropdown("Cartão", CARTOES, padrao=CARTOES[0])
 
+    def __init__(self, periodicidade: str = PERIODICIDADE_PADRAO) -> None:
+        super().__init__()
+        self.periodicidade = periodicidade
+        self.title = f"🔔 Nova Assinatura ({periodicidade})"
+
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
-        try:
-            dia = min(31, max(1, int(str(self.dia_cobranca.value).strip() or "1")))
-        except ValueError:
-            dia = 1
-        dados = {
-            "Nome": str(self.nome.value).strip(),
-            "Categoria": _sel(self.categoria, CATEGORIA_PADRAO),
-            "Valor": converter_numero_flexivel(str(self.valor.value)),
-            "DiaCobranca": dia,
-            "Cartao": _sel(self.cartao, CARTOES[0]),
-            "Ativa": "TRUE",
-            "Inicio": _hoje(),
-            "Fim": None,
-        }
+        dados, aviso = montar_assinatura(
+            nome=str(self.nome.value),
+            valor=str(self.valor.value),
+            proxima_cobranca=str(self.proxima_cobranca.value),
+            categoria=_sel(self.categoria, CATEGORIA_PADRAO),
+            cartao=_sel(self.cartao, CARTOES[0]),
+            periodicidade=self.periodicidade,
+        )
+        if aviso:
+            await interaction.followup.send(aviso, ephemeral=True)
         await gravar_e_confirmar(
             interaction, "Assinaturas", dados, titulo="🔔 Assinatura criada!", cor=COR_ASSINATURA
         )

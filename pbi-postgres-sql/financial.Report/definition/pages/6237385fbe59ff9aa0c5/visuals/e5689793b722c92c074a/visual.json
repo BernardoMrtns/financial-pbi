@@ -359,6 +359,62 @@
           ]
         },
         "howCreated": "User"
+      },
+      {
+        "name": "2f23e9b2a02da2940f2f",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "dCalendario"
+              }
+            },
+            "Property": "AnoMês"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "3c61b5beefc4d76e80ca",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "FluxoCaixaCompleto"
+              }
+            },
+            "Property": "Conta_Cartao"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "787dacab032ae12f7aba",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "FluxoCaixaCompleto"
+              }
+            },
+            "Property": "Descricao"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "864fee1c6fa68eb68191",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "TotalParcelasMes"
+          }
+        },
+        "type": "Advanced"
       }
     ]
   }

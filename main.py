@@ -19,15 +19,15 @@ def limpar_dados(df_master, patrimonio):
             if col in df_master.columns:
                 df_master[col] = df_master[col].astype(float).round(2)
 
-    for tipo in ['btc', 'cdi', 'cripto']:
+    for tipo in ['btc', 'cdi', 'cripto', 'renda_variavel']:
         if not patrimonio[tipo].empty:
             df = patrimonio[tipo]
             if 'DataHora' in df.columns:
                 df['DataHora'] = pd.to_datetime(df['DataHora']).dt.strftime('%Y-%m-%d %H:%M:%S')
-            for col in ['ValorCDI', 'PrecoBTC', 'ValorReais', 'PrecoCripto']:
+            for col in ['ValorCDI', 'PrecoBTC', 'ValorReais', 'PrecoCripto', 'PrecoCota']:
                 if col in df.columns:
                     df[col] = df[col].astype(float).round(2)
-            for col in ['SaldoBTC', 'SaldoCripto']:
+            for col in ['SaldoBTC', 'SaldoCripto', 'SaldoCotas']:
                 if col in df.columns:
                     df[col] = df[col].astype(float).round(8)
                     
@@ -44,7 +44,12 @@ def sincronizar_postgres(df_master, patrimonio):
         except Exception as e:
             logger.error(f"❌ Erro ao atualizar fluxo_caixa no Postgres: {e}")
 
-    tabelas_investimento = [('btc', 'InvestimentoBTC'), ('cdi', 'InvestimentoCDI'), ('cripto', 'InvestimentoCripto')]
+    tabelas_investimento = [
+        ('btc', 'InvestimentoBTC'),
+        ('cdi', 'InvestimentoCDI'),
+        ('cripto', 'InvestimentoCripto'),
+        ('renda_variavel', 'InvestimentoRendaVariavel'),
+    ]
     for tipo, nome_aba in tabelas_investimento:
         if not patrimonio[tipo].empty:
             try:
@@ -64,7 +69,12 @@ def sincronizar_google_sheets_backup(df_master, patrimonio):
             salvar_aba(spreadsheet, "FluxoCaixaCompleto", df_master)
             logger.info("✅ Planilha 'FluxoCaixaCompleto' espelhada com sucesso.")
 
-        abas_investimento = [('btc', 'InvestimentoBTC'), ('cdi', 'InvestimentoCDI'), ('cripto', 'InvestimentoCripto')]
+        abas_investimento = [
+            ('btc', 'InvestimentoBTC'),
+            ('cdi', 'InvestimentoCDI'),
+            ('cripto', 'InvestimentoCripto'),
+            ('renda_variavel', 'InvestimentoRendaVariavel'),
+        ]
         for tipo, nome_aba in abas_investimento:
             if not patrimonio[tipo].empty:
                 adicionar_linha_aba(spreadsheet, nome_aba, patrimonio[tipo])

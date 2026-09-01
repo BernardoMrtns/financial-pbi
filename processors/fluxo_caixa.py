@@ -18,6 +18,15 @@ from utils import calcular_mes_competencia, get_logger, normalizar_nome_cartao
 
 logger = get_logger(__name__)
 
+# Periodicidade das assinaturas -> intervalo em meses entre duas cobrancas.
+# A chave e comparada em caixa alta; ausente ou desconhecida vira mensal.
+MESES_POR_PERIODICIDADE = {"MENSAL": 1, "ANUAL": 12}
+
+# Ate onde projetar assinaturas sem data de Fim. A anual precisa de mais de 12
+# meses para que sempre caia exatamente uma cobranca dentro da janela.
+MESES_PROJECAO_MENSAL = 3
+MESES_PROJECAO_ANUAL = 13
+
 
 class FluxoCaixaProcessor:
     def __init__(self, dados: dict[str, Any], mapa_pagamentos: dict[str, pd.Timestamp]):
@@ -127,10 +136,38 @@ class FluxoCaixaProcessor:
                     )
                 )
 
+    @staticmethod
+    def _intervalo_assinatura(periodicidade: Any) -> int:
+        """Traduz a periodicidade da assinatura para um intervalo em meses.
+
+        Valor ausente ou desconhecido cai em mensal, que era o unico
+        comportamento possivel antes da coluna existir.
+        """
+        chave = str(periodicidade or "").strip().upper()
+        return MESES_POR_PERIODICIDADE.get(chave, 1)
+
+    @staticmethod
+    def _dia_cobranca(registro: Any, inicio: pd.Timestamp) -> int:
+        """Dia do mes em que a assinatura e cobrada, com fallback para o Inicio."""
+        dia = getattr(registro, "DiaCobranca", None)
+        try:
+            if dia is not None and pd.notna(dia) and str(dia).strip() != "":
+                return min(31, max(1, int(float(dia))))
+        except (TypeError, ValueError):
+            pass
+        return inicio.day
+
+    @staticmethod
+    def _ajustar_dia(referencia: pd.Timestamp, dia: int) -> pd.Timestamp:
+        """Aplica o dia de cobranca, recuando para o ultimo dia em meses curtos."""
+        try:
+            return referencia.replace(day=dia)
+        except ValueError:
+            return (referencia + DateOffset(months=1)).replace(day=1) - DateOffset(days=1)
+
     def processar_assinaturas(self) -> None:
         df_assin = self.dados["assinaturas"]
         hoje = pd.Timestamp.today().normalize()
-        fim_projecao = (hoje + DateOffset(months=3)).to_period("M").to_timestamp()
 
         for r in df_assin.itertuples():
             ativa = getattr(r, "Ativa", False) is True or str(getattr(r, "Ativa", "")).upper() == "TRUE"
@@ -141,32 +178,44 @@ class FluxoCaixaProcessor:
             if pd.isna(inicio):
                 continue
 
+            intervalo = self._intervalo_assinatura(getattr(r, "Periodicidade", ""))
+
+            # A anual precisa de uma janela maior que a mensal, senao quase nunca
+            # cairia dentro da projecao. O fim e o ultimo dia do mes-limite, para
+            # nao descartar cobrancas com dia > 1.
+            meses_projecao = MESES_PROJECAO_ANUAL if intervalo >= 12 else MESES_PROJECAO_MENSAL
+            fim_projecao = hoje + DateOffset(months=meses_projecao, day=31)
+
             fim_val = getattr(r, "Fim", pd.NaT)
             fim = fim_val if pd.notna(fim_val) else fim_projecao
             if fim < inicio:
                 continue
 
             try:
-                datas = pd.date_range(start=inicio, end=fim, freq="MS")
-                
-                # Tenta pegar a coluna dia_cobranca, senão faz fallback para inicio.day
-                if hasattr(r, "dia_cobranca") and pd.notna(r.dia_cobranca) and r.dia_cobranca != "":
-                    dia_orig = int(r.dia_cobranca)
-                else:
-                    dia_orig = inicio.day
-                    
-                datas_ajustadas: list[pd.Timestamp] = []
+                dia_cobranca = self._dia_cobranca(r, inicio)
+                cartao = normalizar_nome_cartao(getattr(r, "Cartao", ""))
+                sufixo = "Assinatura Anual" if intervalo >= 12 else "Assinatura"
 
-                for d in datas:
-                    try:
-                        nova_data = d.replace(day=dia_orig)
-                    except ValueError:
-                        nova_data = (d + DateOffset(months=1)).replace(day=1) - DateOffset(days=1)
-                    if nova_data <= fim:
-                        datas_ajustadas.append(nova_data)
+                # Avanca a partir do proprio Inicio (e nao do inicio do mes), o que
+                # preserva o mes de aniversario das anuais e nao perde a primeira
+                # cobranca das mensais.
+                # A tolerancia de um intervalo evita perder a ultima cobranca
+                # quando DiaCobranca e anterior ao dia do Inicio (ex.: Inicio em
+                # 15/01 cobrando todo dia 5 -> referencia 15/04 passa de um fim
+                # em 05/04, mas a cobranca de 05/04 ainda vale).
+                limite_varredura = fim + DateOffset(months=intervalo)
+                ocorrencia = 0
+                while True:
+                    referencia = inicio + DateOffset(months=intervalo * ocorrencia)
+                    if referencia > limite_varredura:
+                        break
 
-                for data_cob in datas_ajustadas:
-                    cartao = normalizar_nome_cartao(getattr(r, "Cartao", ""))
+                    data_cob = self._ajustar_dia(referencia, dia_cobranca)
+                    ocorrencia += 1
+
+                    if data_cob < inicio or data_cob > fim:
+                        continue
+
                     self.lista_movimentacoes.append(
                         Movimentacao(
                             data_original=data_cob,
@@ -175,7 +224,7 @@ class FluxoCaixaProcessor:
                             metodo="Assinatura Recorrente",
                             conta_cartao=cartao,
                             categoria=getattr(r, "Categoria", ""),
-                            descricao=f"{getattr(r, 'Nome', '')} (Assinatura)",
+                            descricao=f"{getattr(r, 'Nome', '')} ({sufixo})",
                             valor=float(getattr(r, "Valor", 0)),
                             status=STATUS_AGUARDANDO_FATURA,
                         )

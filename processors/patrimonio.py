@@ -12,6 +12,7 @@ from config import (
     REQUEST_TIMEOUT_SECONDS,
     SATOSHIS_PER_BITCOIN,
 )
+from services.brapi import buscar_cotacoes
 from utils import (
     calcular_fator_cdi_periodo,
     converter_numero_flexivel,
@@ -21,6 +22,9 @@ from utils import (
 )
 
 logger = get_logger(__name__)
+
+# Classes de renda variavel cotadas na B3 (o resto vai para CDI ou CoinGecko).
+CLASSES_RENDA_VARIAVEL = ("ETF", "ACAO")
 
 
 class PatrimonioCalculator:
@@ -35,51 +39,71 @@ class PatrimonioCalculator:
             return serie["DataHora"]
         return serie.get("Data", pd.NaT)
 
+    @staticmethod
+    def _inferir_classe(classe, tipo: Any) -> str:
+        """Classe do ativo, com fallback para a heuristica anterior a coluna existir.
+
+        Sem esse fallback, qualquer linha gravada por um caminho ainda nao
+        atualizado (ou anterior a migracao) sumiria do patrimonio.
+        """
+        normalizada = str(classe or "").upper().strip()
+        if normalizada and normalizada != "NAN":
+            return normalizada
+        return "CDI" if str(tipo or "").upper().strip() == "CDI" else "CRIPTO"
+
     def processar_tudo(self) -> dict[str, pd.DataFrame]:
-        logger.info("Processando patrimonio (CDI e Cripto)")
+        logger.info("Processando patrimonio (CDI, Cripto e Renda Variavel)")
 
         df_cdi = pd.DataFrame()
         df_btc = pd.DataFrame()
         df_cripto = pd.DataFrame()
+        df_renda_variavel = pd.DataFrame()
 
         try:
             if not self.df_inv.empty:
                 self.df_inv["Tipo"] = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
                 self.df_inv["Operacao"] = self.df_inv["Operacao"].astype(str).str.upper().str.strip()
-                
+
+                classes = self.df_inv["Classe"] if "Classe" in self.df_inv.columns else None
+                self.df_inv["Classe"] = [
+                    self._inferir_classe(None if classes is None else classes.iloc[i], tipo)
+                    for i, tipo in enumerate(self.df_inv["Tipo"])
+                ]
+
                 if "Quantidade" in self.df_inv.columns:
                     self.df_inv["Quantidade"] = converter_numero_flexivel(self.df_inv["Quantidade"])
                 else:
                     self.df_inv["Quantidade"] = 0.0
-                
+
+                # Compatibilidade com linhas gravadas antes do rename da coluna.
                 if "QuantidadeCripto" in self.df_inv.columns:
-                    self.df_inv["QuantidadeCripto"] = converter_numero_flexivel(self.df_inv["QuantidadeCripto"])
-                else:
-                    self.df_inv["QuantidadeCripto"] = 0.0
+                    legado = converter_numero_flexivel(self.df_inv["QuantidadeCripto"])
+                    mask_qtd_zerada = self.df_inv["Quantidade"] == 0
+                    self.df_inv.loc[mask_qtd_zerada, "Quantidade"] = legado[mask_qtd_zerada]
 
-                # CORREÇÃO: Aplica a 'Quantidade' genérica APENAS onde a 'QuantidadeCripto' estiver zerada
-                mask_qtd_zerada = self.df_inv["QuantidadeCripto"] == 0
-                self.df_inv.loc[mask_qtd_zerada, "QuantidadeCripto"] = self.df_inv.loc[
-                    mask_qtd_zerada, "Quantidade"
-                ]
-
-                # MELHORIA: Vetorização da conversão de Satoshi para Bitcoin (remove o FOR lento)
+                # MELHORIA: Vetorizacao da conversao de Satoshi para Bitcoin (remove o FOR lento)
                 mask_btc = self.df_inv["Tipo"] == "BTC"
-                mask_satoshi = mask_btc & (self.df_inv["QuantidadeCripto"] >= 1_000_000) & (self.df_inv["QuantidadeCripto"] % 1 == 0)
-                self.df_inv.loc[mask_satoshi, "QuantidadeCripto"] = self.df_inv.loc[mask_satoshi, "QuantidadeCripto"] / SATOSHIS_PER_BITCOIN
+                mask_satoshi = mask_btc & (self.df_inv["Quantidade"] >= 1_000_000) & (self.df_inv["Quantidade"] % 1 == 0)
+                self.df_inv.loc[mask_satoshi, "Quantidade"] = self.df_inv.loc[mask_satoshi, "Quantidade"] / SATOSHIS_PER_BITCOIN
 
                 self.df_inv["Sinal"] = self.df_inv["Operacao"].apply(self._definir_sinal)
                 self.df_inv["ValorLiquido"] = self.df_inv["Valor"] * self.df_inv["Sinal"]
-                self.df_inv["QtdLiquida"] = self.df_inv["QuantidadeCripto"] * self.df_inv["Sinal"]
+                self.df_inv["QtdLiquida"] = self.df_inv["Quantidade"] * self.df_inv["Sinal"]
 
                 df_cdi = self._calcular_cdi()
                 df_btc = self._calcular_bitcoin_snapshot()
                 df_cripto = self._calcular_criptos_snapshot()
+                df_renda_variavel = self._calcular_renda_variavel_snapshot()
 
         except Exception as error:
             logger.error("Erro ao processar investimentos: %s", error)
 
-        return {"cdi": df_cdi, "btc": df_btc, "cripto": df_cripto}
+        return {
+            "cdi": df_cdi,
+            "btc": df_btc,
+            "cripto": df_cripto,
+            "renda_variavel": df_renda_variavel,
+        }
 
     @staticmethod
     def _definir_sinal(operacao: str) -> int:
@@ -88,8 +112,7 @@ class PatrimonioCalculator:
         return 1
 
     def _calcular_cdi(self) -> pd.DataFrame:
-        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
-        df_movimentos_cdi = self.df_inv[tipo_normalizado.eq("CDI")].copy()
+        df_movimentos_cdi = self.df_inv[self.df_inv["Classe"].eq("CDI")].copy()
 
         if df_movimentos_cdi.empty:
             return pd.DataFrame()
@@ -230,8 +253,13 @@ class PatrimonioCalculator:
         )
 
     def _calcular_criptos_snapshot(self) -> pd.DataFrame:
-        tipo_normalizado = self.df_inv["Tipo"].astype(str).str.upper().str.strip()
-        df_cripto = self.df_inv[(~tipo_normalizado.isin(["BTC", "CDI"])) & (tipo_normalizado != "")].copy()
+        # Antes qualquer Tipo diferente de BTC/CDI caia aqui e virava consulta a
+        # CoinGecko; agora so entra o que estiver marcado como Cripto.
+        df_cripto = self.df_inv[
+            self.df_inv["Classe"].eq("CRIPTO")
+            & self.df_inv["Tipo"].ne("BTC")
+            & self.df_inv["Tipo"].ne("")
+        ].copy()
 
         if df_cripto.empty:
             return pd.DataFrame()
@@ -269,8 +297,44 @@ class PatrimonioCalculator:
 
         return pd.DataFrame(linhas)
 
+    def _calcular_renda_variavel_snapshot(self) -> pd.DataFrame:
+        """Snapshot de ETFs e acoes da B3, cotados em BRL pela brapi."""
+        df_rv = self.df_inv[self.df_inv["Classe"].isin(CLASSES_RENDA_VARIAVEL)].copy()
+        df_rv = df_rv[df_rv["Tipo"].ne("")]
+        if df_rv.empty:
+            return pd.DataFrame()
+
+        cotacoes = buscar_cotacoes(sorted(df_rv["Tipo"].unique()))
+        if not cotacoes:
+            return pd.DataFrame()
+
+        agora = pd.Timestamp.now()
+        linhas = []
+
+        for (ticker, classe), grupo in df_rv.groupby(["Tipo", "Classe"], sort=True):
+            cotacao = cotacoes.get(ticker)
+            if not cotacao:
+                continue
+
+            saldo_total = grupo["QtdLiquida"].sum()
+            preco_atual = cotacao["preco"]
+
+            linhas.append(
+                {
+                    "DataHora": agora,
+                    "Ticker": ticker,
+                    "Ativo": cotacao["nome"],
+                    "Classe": "ETF" if classe == "ETF" else "Acao",
+                    "SaldoCotas": saldo_total,
+                    "PrecoCota": preco_atual,
+                    "ValorReais": saldo_total * preco_atual,
+                }
+            )
+
+        return pd.DataFrame(linhas)
+
     def _calcular_bitcoin_snapshot(self) -> pd.DataFrame:
-        df_btc = self.df_inv[self.df_inv["Tipo"] == "BTC"].copy()
+        df_btc = self.df_inv[self.df_inv["Classe"].eq("CRIPTO") & self.df_inv["Tipo"].eq("BTC")].copy()
         if df_btc.empty:
             return pd.DataFrame()
 

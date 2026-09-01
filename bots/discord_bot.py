@@ -33,14 +33,19 @@ from ui.constants import (
     CARTOES,
     CATEGORIAS,
     CATEGORIAS_RECEITA,
+    CLASSES_INVESTIMENTO,
+    CLASSE_INVESTIMENTO_PADRAO,
     CONTAS,
     COR_ASSINATURA,
     COR_CARTAO,
     COR_DEBITO,
     COR_PIX,
     COR_RECEITA,
+    OPERACOES_INVESTIMENTO,
+    PERIODICIDADES,
     PRIORIDADES,
 )
+from ui.modals import montar_assinatura
 from ui.storage import gravar_e_confirmar
 from ui.views import (
     AssinaturaToggleView,
@@ -302,6 +307,9 @@ CHOICES_CATEGORIA_RECEITA = _choices(CATEGORIAS_RECEITA)
 CHOICES_CONTA = _choices(CONTAS)
 CHOICES_CARTAO = _choices(CARTOES)
 CHOICES_PRIORIDADE = _choices(PRIORIDADES)
+CHOICES_PERIODICIDADE = _choices(PERIODICIDADES)
+CHOICES_CLASSE_INVEST = _choices(CLASSES_INVESTIMENTO)
+CHOICES_OPERACAO_INVEST = _choices(OPERACOES_INVESTIMENTO)
 
 
 # ==========================================
@@ -619,15 +627,25 @@ async def pix_cmd(interaction, valor_total: str, entrada: str, pagas: int, categ
 
 
 @bot.tree.command(name="invest", description="Registra uma operação de investimento")
-@app_commands.describe(tipo="Ex: Renda Fixa, Cripto", operacao="Aporte/Saque", valor="Montante", qtd_cripto="Se cripto, quantidade")
-async def invest_cmd(interaction, tipo: str, operacao: str, valor: str, qtd_cripto: str = "0"):
+@app_commands.describe(
+    classe="Classe do ativo (define a fonte da cotação)",
+    tipo="Ticker do ativo. Ex: CDI, BTC, BOVA11, PETR4",
+    operacao="Aporte/Saque",
+    valor="Montante",
+    quantidade="Cotas, ações ou cripto",
+)
+@app_commands.choices(classe=CHOICES_CLASSE_INVEST, operacao=CHOICES_OPERACAO_INVEST)
+async def invest_cmd(
+    interaction, classe: str, tipo: str, operacao: str, valor: str, quantidade: str = "0"
+):
     await interaction.response.defer(ephemeral=True, thinking=True)
     dados = {
         "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Classe": classe,
         "Tipo": tipo.upper(),
         "Operacao": operacao,
         "Valor": converter_numero_flexivel(valor),
-        "QuantidadeCripto": converter_numero_flexivel(qtd_cripto),
+        "Quantidade": converter_numero_flexivel(quantidade),
     }
     await gravar_e_confirmar(interaction, "Investimentos", dados, titulo="📈 Investimento registrado!", cor=COR_CARTAO)
 
@@ -724,26 +742,35 @@ async def _confirmar_assinatura_toggle(
 @bot.tree.command(name="assinatura", description="Cria uma nova assinatura recorrente")
 @app_commands.describe(
     nome="Ex: Netflix",
-    valor="Valor mensal, ex: 39,90",
-    dia_cobranca="Dia do mês (1-31)",
+    valor="Valor por cobrança, ex: 39,90",
+    proxima_cobranca="Data da próxima cobrança (DD/MM/AAAA)",
+    periodicidade="Mensal ou Anual",
     categoria="Categoria",
     cartao="Cartão de cobrança",
 )
-@app_commands.choices(categoria=CHOICES_CATEGORIA, cartao=CHOICES_CARTAO)
+@app_commands.choices(
+    categoria=CHOICES_CATEGORIA, cartao=CHOICES_CARTAO, periodicidade=CHOICES_PERIODICIDADE
+)
 async def assinatura_cmd(
-    interaction, nome: str, valor: str, dia_cobranca: int, categoria: str, cartao: str
+    interaction,
+    nome: str,
+    valor: str,
+    proxima_cobranca: str,
+    periodicidade: str,
+    categoria: str,
+    cartao: str,
 ):
     await interaction.response.defer(ephemeral=True, thinking=True)
-    dados = {
-        "Nome": nome.strip(),
-        "Categoria": categoria,
-        "Valor": converter_numero_flexivel(valor),
-        "DiaCobranca": min(31, max(1, dia_cobranca)),
-        "Cartao": cartao,
-        "Ativa": "TRUE",
-        "Inicio": datetime.now().strftime("%Y-%m-%d"),
-        "Fim": None,
-    }
+    dados, aviso = montar_assinatura(
+        nome=nome,
+        valor=valor,
+        proxima_cobranca=proxima_cobranca,
+        categoria=categoria,
+        cartao=cartao,
+        periodicidade=periodicidade,
+    )
+    if aviso:
+        await interaction.followup.send(aviso, ephemeral=True)
     await gravar_e_confirmar(
         interaction, "Assinaturas", dados, titulo="🔔 Assinatura criada!", cor=COR_ASSINATURA
     )
@@ -918,10 +945,11 @@ async def on_message(message: discord.Message):
         aba_destino = "Investimentos"
         dados_finais = {
             "DataHora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Classe": dados_ia.get("classe_investimento") or CLASSE_INVESTIMENTO_PADRAO,
             "Tipo": dados_ia["tipo_investimento"].upper(),
             "Operacao": dados_ia["operacao"],
             "Valor": dados_ia["valor"],
-            "QuantidadeCripto": dados_ia.get("quantidade_cripto", 0.0),
+            "Quantidade": dados_ia.get("quantidade", 0.0),
         }
     elif tipo_transacao == "pix":
         aba_destino = "PixParcelado"

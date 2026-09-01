@@ -6,7 +6,7 @@
     "y": 104.28211586901763,
     "z": 1000,
     "height": 362.72040302267,
-    "width": 640.20151133501258,
+    "width": 640.2015113350126,
     "tabOrder": 1000
   },
   "visual": {
@@ -59,6 +59,36 @@
               "queryRef": "_Measures.PatrimonioCriptosAtual",
               "nativeQueryRef": "Criptos",
               "displayName": "Criptos"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "PatrimonioETFAtual"
+                }
+              },
+              "queryRef": "_Measures.PatrimonioETFAtual",
+              "nativeQueryRef": "ETFs",
+              "displayName": "ETFs"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "PatrimonioAcoesAtual"
+                }
+              },
+              "queryRef": "_Measures.PatrimonioAcoesAtual",
+              "nativeQueryRef": "Ações",
+              "displayName": "Ações"
             }
           ]
         }
@@ -206,6 +236,42 @@
           },
           "selector": {
             "metadata": "_Measures.PatrimonioCriptosAtual"
+          }
+        },
+        {
+          "properties": {
+            "fill": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#2E86DE'"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.PatrimonioETFAtual"
+          }
+        },
+        {
+          "properties": {
+            "fill": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#F2C037'"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.PatrimonioAcoesAtual"
           }
         }
       ]

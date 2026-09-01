@@ -23,6 +23,7 @@ COLUNAS_MOEDA_POR_ABA: dict[str, set[str]] = {
     "InvestimentoBTC": {"Valor"},
     "InvestimentoCDI": {"ValorCDI"},
     "InvestimentoCripto": {"Valor"},
+    "InvestimentoRendaVariavel": {"PrecoCota", "ValorReais"},
     "Investimentos": {"Valor"},
     "PixParcelado": {"ValorTotal", "ValorEntrada"},
     "Receitas": {"Valor"},
@@ -199,7 +200,7 @@ def adicionar_linha_aba(spreadsheet: gspread.Spreadsheet, nome_aba: str, df_nova
 def _normalizar_dataframe_para_upload(df: pd.DataFrame, nome_aba: str) -> pd.DataFrame:
     for col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[col]):
-            if col == "DataHora" or nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI"}:
+            if col == "DataHora" or nome_aba in {"InvestimentoBTC", "InvestimentoCripto", "InvestimentoCDI", "InvestimentoRendaVariavel"}:
                 df[col] = df[col].dt.strftime("%d/%m/%Y %H:%M:%S")
             else:
                 df[col] = df[col].dt.strftime("%d/%m/%Y")

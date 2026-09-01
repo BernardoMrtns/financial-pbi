@@ -4,7 +4,7 @@ Pipeline de finanças pessoais com integração ao Google Sheets para:
 
 - consolidar fluxo de caixa,
 - processar receitas e despesas parceladas,
-- calcular snapshots de patrimônio (CDI, BTC e outras criptos).
+- calcular snapshots de patrimônio (CDI, BTC, criptos, ETFs e ações).
 
 ## Visão Rápida
 
@@ -19,7 +19,8 @@ Pipeline de finanças pessoais com integração ao Google Sheets para:
 - Cálculo de patrimônio com:
     - CDI com série histórica Bacen,
     - BTC com conversão correta de satoshis,
-    - Criptos por ticker usando CoinGecko.
+    - Criptos por ticker usando CoinGecko,
+    - ETFs e ações da B3 por ticker usando brapi.dev.
 - Escrita robusta no Sheets com:
     - estratégia de swap para snapshots,
     - append em lote para histórico incremental.
@@ -63,6 +64,8 @@ Ajuste os parâmetros em `config.py`:
 Importante:
 
 - `SATOSHIS_PER_BITCOIN` está definido como `100_000_000` (valor correto).
+- `BRAPI_TOKEN` (variável de ambiente) habilita a cotação de ETFs e ações da B3.
+  Sem ele, o restante do patrimônio continua sendo calculado normalmente.
 - `VENCIMENTO_CARTOES` define o dia de vencimento de cada cartão.
 - `DIAS_FECHAMENTO_CARTOES` define quantos dias antes do vencimento a fatura costuma fechar; quando não houver fechamento informado, a rotina usa um fallback conservador.
 
@@ -98,10 +101,10 @@ pytest -q
 | `FaturasPagas` | Último ciclo pago por cartão |
 | `ComprasCartao` | Compras e parcelamentos no cartão |
 | `PixParcelado` | Parcelamentos com entrada e parcelas |
-| `Assinaturas` | Custos recorrentes |
+| `Assinaturas` | Custos recorrentes (mensais ou anuais, via `Periodicidade`) |
 | `DebitoAvulso` | Saídas à vista |
 | `Receitas` | Entradas de caixa |
-| `Investimentos` | Movimentações de CDI/BTC/cripto |
+| `Investimentos` | Movimentações por classe: CDI, Cripto, ETF e Ação |
 
 ### Saídas geradas
 
@@ -111,6 +114,7 @@ pytest -q
 | `InvestimentoBTC` | Snapshot atual de BTC |
 | `InvestimentoCripto` | Snapshot atual de criptos |
 | `InvestimentoCDI` | Snapshot atual de CDI (`DataHora`) |
+| `InvestimentoRendaVariavel` | Snapshot atual de ETFs e ações da B3 |
 
 ## O Que Mudou no Preenchimento da Planilha
 
