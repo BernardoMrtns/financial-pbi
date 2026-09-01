@@ -1,5 +1,5 @@
 {
-  "compatibilityLevel": 1600,
+  "compatibilityLevel": 1606,
   "model": {
     "annotations": [
       {
@@ -6499,6 +6499,48 @@
                   }
                 ]
               },
+              "table_measures.patrimonioacoesatual": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "_Measures",
+                    "ConceptualProperty": "PatrimonioAcoesAtual"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "Ações": {
+                      "Source": {
+                        "Agent": "PowerBI.VisualColumnRename",
+                        "Type": "External"
+                      },
+                      "State": "Suggested",
+                      "Weight": 0.9
+                    }
+                  }
+                ]
+              },
+              "table_measures.patrimonioetfatual": {
+                "Definition": {
+                  "Binding": {
+                    "ConceptualEntity": "_Measures",
+                    "ConceptualProperty": "PatrimonioETFAtual"
+                  }
+                },
+                "State": "Generated",
+                "Terms": [
+                  {
+                    "ETFs": {
+                      "Source": {
+                        "Agent": "PowerBI.VisualColumnRename",
+                        "Type": "External"
+                      },
+                      "State": "Suggested",
+                      "Weight": 0.9
+                    }
+                  }
+                ]
+              },
               "wishlist": {
                 "Definition": {
                   "Binding": {
@@ -12972,60 +13014,6 @@
             "lineageTag": "710eac4d-77e3-4006-af9b-ca385a6d9c7e"
           },
           {
-            "name": "PatrimonioRendaVariavelAtual",
-            "annotations": [
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"currencyCulture\":\"pt-BR\"}"
-              }
-            ],
-            "expression": [
-              "",
-              "CALCULATE(",
-              "    SUM(InvestimentoRendaVariavel[ValorReais]),",
-              "    InvestimentoRendaVariavel[DataHora] = MAX(InvestimentoRendaVariavel[DataHora])",
-              ")"
-            ],
-            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
-            "lineageTag": "5fea7eef-3f90-56b9-9ca5-c29455f09724"
-          },
-          {
-            "name": "PatrimonioETFAtual",
-            "annotations": [
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"currencyCulture\":\"pt-BR\"}"
-              }
-            ],
-            "expression": [
-              "",
-              "CALCULATE(",
-              "    [PatrimonioRendaVariavelAtual],",
-              "    InvestimentoRendaVariavel[Classe] = \"ETF\"",
-              ")"
-            ],
-            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
-            "lineageTag": "db195998-626f-53f1-a052-76db982d6b4c"
-          },
-          {
-            "name": "PatrimonioAcoesAtual",
-            "annotations": [
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"currencyCulture\":\"pt-BR\"}"
-              }
-            ],
-            "expression": [
-              "",
-              "CALCULATE(",
-              "    [PatrimonioRendaVariavelAtual],",
-              "    InvestimentoRendaVariavel[Classe] = \"Acao\"",
-              ")"
-            ],
-            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
-            "lineageTag": "44cb38a3-c3fa-5385-b159-e64411c8bcd0"
-          },
-          {
             "name": "PatrimonioCDI_TimeSeries",
             "annotations": [
               {
@@ -13211,6 +13199,60 @@
             ],
             "formatString": "\"R$\"\\ #,0.###############;-\"R$\"\\ #,0.###############;\"R$\"\\ #,0.###############",
             "lineageTag": "27b73397-1fb0-4437-ab31-cf6d39aee7ab"
+          },
+          {
+            "name": "PatrimonioRendaVariavelAtual",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    SUM(InvestimentoRendaVariavel[ValorReais]),",
+              "    InvestimentoRendaVariavel[DataHora] = MAX(InvestimentoRendaVariavel[DataHora])",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "5fea7eef-3f90-56b9-9ca5-c29455f09724"
+          },
+          {
+            "name": "PatrimonioETFAtual",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    [PatrimonioRendaVariavelAtual],",
+              "    InvestimentoRendaVariavel[Classe] = \"ETF\"",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "db195998-626f-53f1-a052-76db982d6b4c"
+          },
+          {
+            "name": "PatrimonioAcoesAtual",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"currencyCulture\":\"pt-BR\"}"
+              }
+            ],
+            "expression": [
+              "",
+              "CALCULATE(",
+              "    [PatrimonioRendaVariavelAtual],",
+              "    InvestimentoRendaVariavel[Classe] = \"Acao\"",
+              ")"
+            ],
+            "formatString": "\"R$\"\\ #,0.00;-\"R$\"\\ #,0.00;\"R$\"\\ #,0.00",
+            "lineageTag": "44cb38a3-c3fa-5385-b159-e64411c8bcd0"
           }
         ],
         "partitions": [
@@ -15002,153 +15044,6 @@
         ]
       },
       {
-        "name": "InvestimentoRendaVariavel",
-        "annotations": [
-          {
-            "name": "PBI_NavigationStepName",
-            "value": "Navegação"
-          },
-          {
-            "name": "PBI_ResultType",
-            "value": "Table"
-          }
-        ],
-        "columns": [
-          {
-            "name": "DataHora",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              }
-            ],
-            "dataType": "dateTime",
-            "formatString": "General Date",
-            "lineageTag": "4124dd19-470d-5e44-9bae-efd8e9585cf6",
-            "sourceColumn": "DataHora",
-            "summarizeBy": "none"
-          },
-          {
-            "name": "Ticker",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              }
-            ],
-            "dataType": "string",
-            "lineageTag": "916275d3-45c7-5c4d-8f0c-c73fabeea60f",
-            "sourceColumn": "Ticker",
-            "summarizeBy": "none"
-          },
-          {
-            "name": "Ativo",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              }
-            ],
-            "dataType": "string",
-            "lineageTag": "5060bd33-ee7f-5e04-8593-230bb488a26b",
-            "sourceColumn": "Ativo",
-            "summarizeBy": "none"
-          },
-          {
-            "name": "Classe",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              }
-            ],
-            "dataType": "string",
-            "lineageTag": "711079bf-c9af-5c78-93b8-bbc8d5c31aee",
-            "sourceColumn": "Classe",
-            "summarizeBy": "none"
-          },
-          {
-            "name": "SaldoCotas",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              },
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"isGeneralNumber\":true}"
-              }
-            ],
-            "dataType": "double",
-            "lineageTag": "4dd04033-8c8c-5777-9831-a5ba712ab4d1",
-            "sourceColumn": "SaldoCotas",
-            "summarizeBy": "sum"
-          },
-          {
-            "name": "PrecoCota",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              },
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"isGeneralNumber\":true}"
-              }
-            ],
-            "dataType": "decimal",
-            "lineageTag": "dc15b64f-643d-5133-ac3a-7c837cef2628",
-            "sourceColumn": "PrecoCota",
-            "summarizeBy": "sum"
-          },
-          {
-            "name": "ValorReais",
-            "annotations": [
-              {
-                "name": "SummarizationSetBy",
-                "value": "Automatic"
-              },
-              {
-                "name": "PBI_FormatHint",
-                "value": "{\"isGeneralNumber\":true}"
-              }
-            ],
-            "dataType": "decimal",
-            "lineageTag": "b5555b61-889a-514b-9cd6-ac529270ca6c",
-            "sourceColumn": "ValorReais",
-            "summarizeBy": "sum"
-          }
-        ],
-        "lineageTag": "c86015d2-21e9-5d2f-a123-ed38d5a2efb8",
-        "partitions": [
-          {
-            "name": "InvestimentoRendaVariavel",
-            "mode": "import",
-            "source": {
-              "expression": [
-                "let",
-                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
-                "    Table = Source{[Schema=\"public\",Item=\"investimento_renda_variavel\"]}[Data],",
-                "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
-                "    Renamed = Table.RenameColumns(Cleaned,{",
-                "        {\"data_hora\", \"DataHora\"}, ",
-                "        {\"ticker\", \"Ticker\"}, ",
-                "        {\"ativo\", \"Ativo\"}, ",
-                "        {\"classe\", \"Classe\"}, ",
-                "        {\"saldo_cotas\", \"SaldoCotas\"}, ",
-                "        {\"preco_cota\", \"PrecoCota\"}, ",
-                "        {\"valor_reais\", \"ValorReais\"}",
-                "    }),",
-                "    ChangedType = Table.TransformColumnTypes(Renamed,{{\"DataHora\", type datetime}, {\"SaldoCotas\", type number}, {\"PrecoCota\", Currency.Type}, {\"ValorReais\", Currency.Type}, {\"Ticker\", type text}, {\"Ativo\", type text}, {\"Classe\", type text}})",
-                "in",
-                "    ChangedType"
-              ],
-              "type": "m"
-            }
-          }
-        ]
-      },
-      {
         "name": "LocalDateTable_201002de-f468-445d-a8bb-031035068750",
         "annotations": [
           {
@@ -16349,6 +16244,153 @@
           }
         ],
         "showAsVariationsOnly": true
+      },
+      {
+        "name": "InvestimentoRendaVariavel",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "name": "DataHora",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "General Date",
+            "lineageTag": "4124dd19-470d-5e44-9bae-efd8e9585cf6",
+            "sourceColumn": "DataHora",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Ticker",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "916275d3-45c7-5c4d-8f0c-c73fabeea60f",
+            "sourceColumn": "Ticker",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Ativo",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "5060bd33-ee7f-5e04-8593-230bb488a26b",
+            "sourceColumn": "Ativo",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Classe",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "711079bf-c9af-5c78-93b8-bbc8d5c31aee",
+            "sourceColumn": "Classe",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "SaldoCotas",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "double",
+            "lineageTag": "4dd04033-8c8c-5777-9831-a5ba712ab4d1",
+            "sourceColumn": "SaldoCotas",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "PrecoCota",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "decimal",
+            "lineageTag": "dc15b64f-643d-5133-ac3a-7c837cef2628",
+            "sourceColumn": "PrecoCota",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "ValorReais",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "decimal",
+            "lineageTag": "b5555b61-889a-514b-9cd6-ac529270ca6c",
+            "sourceColumn": "ValorReais",
+            "summarizeBy": "sum"
+          }
+        ],
+        "lineageTag": "c86015d2-21e9-5d2f-a123-ed38d5a2efb8",
+        "partitions": [
+          {
+            "name": "InvestimentoRendaVariavel",
+            "mode": "import",
+            "source": {
+              "expression": [
+                "let",
+                "    Source = PostgreSQL.Database(\"bernardofinancas.duckdns.org\", \"financial_db\"),",
+                "    Table = Source{[Schema=\"public\",Item=\"investimento_renda_variavel\"]}[Data],",
+                "    Cleaned = Table.RemoveColumns(Table,{\"id\"}),",
+                "    Renamed = Table.RenameColumns(Cleaned,{",
+                "        {\"data_hora\", \"DataHora\"}, ",
+                "        {\"ticker\", \"Ticker\"}, ",
+                "        {\"ativo\", \"Ativo\"}, ",
+                "        {\"classe\", \"Classe\"}, ",
+                "        {\"saldo_cotas\", \"SaldoCotas\"}, ",
+                "        {\"preco_cota\", \"PrecoCota\"}, ",
+                "        {\"valor_reais\", \"ValorReais\"}",
+                "    }),",
+                "    ChangedType = Table.TransformColumnTypes(Renamed,{{\"DataHora\", type datetime}, {\"SaldoCotas\", type number}, {\"PrecoCota\", Currency.Type}, {\"ValorReais\", Currency.Type}, {\"Ticker\", type text}, {\"Ativo\", type text}, {\"Classe\", type text}})",
+                "in",
+                "    ChangedType"
+              ],
+              "type": "m"
+            }
+          }
+        ]
       }
     ]
   }

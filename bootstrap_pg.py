@@ -4,8 +4,21 @@ import re
 from sqlalchemy import create_engine, text
 
 # --- DATABASE CONFIGURATION ---
-# Replace 'your_secure_password' with the password you set in PostgreSQL
-DB_URL = "postgresql://admin_finance:Eu120105_@localhost:5432/financial_db"
+# ATENCAO: este script usa to_sql(if_exists='replace'), ou seja, DROPA e recria
+# cada tabela -- rodar contra producao apaga tudo, inclusive colunas adicionadas
+# depois dele (ver migrations/).
+#
+# Por isso nao existe URL padrao: ela precisa vir explicitamente na variavel de
+# ambiente BOOTSTRAP_DB_URL. Nunca coloque a credencial aqui: o repositorio e
+# publico.
+DB_URL = os.getenv("BOOTSTRAP_DB_URL")
+if not DB_URL:
+    raise SystemExit(
+        "Defina BOOTSTRAP_DB_URL para rodar o bootstrap.\n"
+        "ATENCAO: este script dropa e recria TODAS as tabelas listadas em "
+        "csv_mappings."
+    )
+
 engine = create_engine(DB_URL)
 
 def normalize_column_names(columns):

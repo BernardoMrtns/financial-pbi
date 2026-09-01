@@ -65,8 +65,41 @@ CREATE TABLE IF NOT EXISTS investimento_renda_variavel (
 CREATE INDEX IF NOT EXISTS idx_inv_rv_data_hora
     ON investimento_renda_variavel (data_hora DESC);
 
+-- OBRIGATORIO se voce rodou este arquivo como superusuario (sudo -u postgres):
+-- a tabela nasceria com dono 'postgres' e o admin_finance -- que e quem o ETL e o
+-- Power BI usam -- ficaria sem SELECT/INSERT. O sintoma no Power BI e
+-- "The key didn't match any rows in the table"; no ETL, um erro so no primeiro
+-- aporte em ETF/acao. As outras tabelas pertencem a admin_finance porque nasceram
+-- do pandas.to_sql, usando a conexao da aplicacao.
+ALTER TABLE investimento_renda_variavel OWNER TO admin_finance;
+ALTER SEQUENCE investimento_renda_variavel_id_seq OWNER TO admin_finance;
+
+-- Conferencia: tem que devolver zero.
+SELECT count(*) AS tabelas_com_dono_errado
+FROM pg_tables WHERE schemaname = 'public' AND tableowner <> 'admin_finance';
+
 -- ---------------------------------------------------------------------------
--- 4. Conferencia final.
+-- 4. Ressincroniza as sequences de id.
+--
+--    Nao tem relacao com esta migracao, mas foi descoberto ao aplica-la: varias
+--    sequences ficaram atras do max(id) (heranca do bootstrap_pg.py, que cria a
+--    coluna id depois de popular a tabela). O sintoma e um "duplicate key value
+--    violates unique constraint" na PRIMEIRA insercao pelo bot. Idempotente.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE t record; ultimo bigint;
+BEGIN
+  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+           AND EXISTS (SELECT 1 FROM pg_sequences s WHERE s.sequencename = tablename || '_id_seq')
+  LOOP
+    EXECUTE format('SELECT COALESCE(max(id),0) FROM %I', t.tablename) INTO ultimo;
+    -- is_called = true garante que o proximo nextval() devolva ultimo + 1
+    EXECUTE format('SELECT setval(%L, GREATEST(%s,1), true)', t.tablename || '_id_seq', ultimo);
+  END LOOP;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 5. Conferencia final.
 -- ---------------------------------------------------------------------------
 SELECT periodicidade, count(*) FROM assinaturas GROUP BY periodicidade;
 SELECT classe, count(*) FROM investimentos GROUP BY classe;
